@@ -1,0 +1,2926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOPP Catalyst Cropper — Fluitec</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--blue:#234083;--blue-mid:#345e9e;--green:#6dbe4b;--bg:#f0f2f7;--surface:#fff;--surface2:#f7f8fc;--border:#dce1ee;--text:#1a2340;--text-2:#5a6580;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Titillium Web',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  header{background:var(--blue);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:60px;box-shadow:0 2px 12px rgba(35,64,131,.2);}
+  .logo{display:flex;align-items:center;gap:10px;}
+  .header-sub{font-size:12px;color:rgba(255,255,255,.6);letter-spacing:1.5px;text-transform:uppercase;}
+  main{max-width:1400px;margin:0 auto;padding:32px 28px 80px;}
+
+  .drop-zone{border:2px dashed var(--border);border-radius:12px;background:var(--surface);padding:44px 40px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+  .drop-zone:hover,.drop-zone.dragover{border-color:var(--blue-mid);background:#f4f6fd;}
+  .drop-icon{width:48px;height:48px;margin:0 auto 14px;background:var(--blue);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .drop-icon svg{width:22px;height:22px;fill:#fff;}
+  .drop-title{font-size:17px;font-weight:700;color:var(--blue);margin-bottom:5px;}
+  .drop-sub{font-size:12px;color:var(--text-2);}
+  #file-input{display:none;}
+
+  .pdf-controls{display:none;margin-top:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:12px 16px;}
+  .pdf-controls.show{display:flex;align-items:center;gap:14px;}
+  .pdf-controls label{font-size:12px;font-weight:600;}
+  .pdf-thumb-strip{display:flex;gap:8px;overflow-x:auto;}
+  .pdf-thumb{flex-shrink:0;width:64px;height:48px;border-radius:4px;border:2px solid var(--border);cursor:pointer;object-fit:cover;transition:border-color .15s;}
+  .pdf-thumb.selected{border-color:var(--blue);}
+
+  .analyze-btn{display:none;margin-top:18px;padding:13px 38px;background:var(--green);color:#fff;font-family:'Titillium Web',sans-serif;font-size:14px;font-weight:700;letter-spacing:.8px;border:none;border-radius:8px;cursor:pointer;transition:background .15s,transform .1s;}
+  .analyze-btn.show{display:inline-block;}
+  .analyze-btn:hover{background:#4a9232;transform:translateY(-1px);}
+  .analyze-btn:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+
+  .progress-bar-wrap{display:none;margin-top:14px;background:var(--border);border-radius:99px;height:5px;overflow:hidden;}
+  .progress-bar-wrap.show{display:block;}
+  .progress-bar{height:100%;background:var(--green);border-radius:99px;width:0%;transition:width .3s;}
+  .progress-label{font-size:11px;color:var(--text-2);margin-top:5px;font-family:'DM Mono',monospace;}
+
+  #results-section{display:none;}
+  #results-section.show{display:block;}
+  .results-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--border);}
+  .results-title{font-size:20px;font-weight:700;color:var(--blue);}
+  .results-meta{font-size:12px;color:var(--text-2);font-family:'DM Mono',monospace;}
+
+  #adjust-hint{font-size:11px;color:var(--text-2);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 14px;margin-bottom:16px;line-height:1.5;display:none;}
+
+  .coil-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;}
+
+  /* Color score tab */
+  .score-row{display:grid;grid-template-columns:28px auto 1fr auto;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s;}
+  .score-row:hover{box-shadow:0 4px 16px rgba(35,64,131,.10);}
+  .score-rank{font-size:11px;font-weight:700;color:var(--text-2);font-family:'DM Mono',monospace;text-align:center;}
+  .score-swatch{width:40px;height:40px;border-radius:6px;border:1.5px solid rgba(0,0,0,.12);flex-shrink:0;}
+  .score-info{display:flex;flex-direction:column;gap:3px;overflow:hidden;}
+  .score-label{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .score-sub{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-2);}
+  .score-bar-wrap{height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:4px;}
+  .score-bar{height:100%;border-radius:99px;}
+  .score-num{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;text-align:right;line-height:1;}
+  .score-band-lbl{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;text-align:right;margin-top:2px;}
+
+  .vtab{padding:7px 18px;font-family:'Titillium Web',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-2);cursor:pointer;transition:all .15s;}
+  .vtab:hover{border-color:var(--blue-mid);color:var(--blue);}
+  .vtab-active{background:var(--blue);border-color:var(--blue);color:#fff !important;}
+  #view-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .coil-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;cursor:default;transition:transform .15s,box-shadow .15s;}
+  .coil-img-wrap{position:relative;background:#e8ecf4;}
+  .coil-img-wrap canvas{display:block;width:100%;height:auto;}
+  .coil-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  .coil-label{padding:6px 10px;font-size:10px;font-weight:700;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);}
+
+  /* Split modal */
+  .split-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center;}
+  .split-modal{background:var(--surface);border-radius:14px;padding:24px;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+  .split-modal-title{font-size:16px;font-weight:700;color:var(--blue);}
+  .split-modal-hint{font-size:11px;color:var(--text-2);}
+  .split-canvas-wrap{position:relative;overflow:hidden;cursor:col-resize;flex-shrink:0;}
+  .split-canvas-wrap canvas{display:block;max-height:60vh;width:auto;}
+  .split-line{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,20,147,0.9);pointer-events:none;transform:translateX(-1px);}
+  .split-modal-btns{display:flex;gap:10px;justify-content:flex-end;}
+  .split-modal-btns button{padding:9px 22px;font-family:'Titillium Web',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:7px;cursor:pointer;}
+  .btn-do-split{background:var(--green);color:#fff;}
+  .btn-do-split:hover{background:#4a9232;}
+  .btn-cancel-split{background:var(--surface2);color:var(--text-2);border:1.5px solid var(--border) !important;}
+  .btn-cancel-split:hover{background:var(--border);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="data:image/jpeg;base64,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" alt="Fluitec" style="height:34px;width:auto;display:block;">
+  </div>
+  <span class="header-sub">TOPP Catalyst Cropper</span>
+</header>
+
+<main>
+  <div style="margin-bottom:28px">
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
+      <div class="drop-title">Drop catalyst coil photo or PDF</div>
+      <div class="drop-sub">Automatically finds and crops each coil — drag pink edges to adjust, split merged coils, remove extras</div>
+      <input type="file" id="file-input" accept="image/*,.pdf">
+    </div>
+    <div class="pdf-controls" id="pdf-controls">
+      <label>Page:</label>
+      <div class="pdf-thumb-strip" id="pdf-thumb-strip"></div>
+    </div>
+    <button class="analyze-btn" id="analyze-btn">Detect Coils</button>
+    <div class="progress-bar-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-label" id="progress-label"></div>
+  </div>
+
+  <div id="results-section">
+    <div class="results-header">
+      <div class="results-title" id="results-title">Catalyst Coils</div>
+      <div class="results-meta" id="results-meta"></div>
+    </div>
+
+    <!-- Stage 1: crop adjust -->
+    <div id="stage-crop" style="display:none;">
+      <div style="font-size:11px;color:var(--text-2);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 14px;margin-bottom:14px;line-height:1.5;">
+        Drag the <strong style="color:#ff1493;">pink edges</strong> to tighten each crop around the coil. Click <strong>✕</strong> to remove. When happy, click <strong>Submit Crops</strong>.
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+        <button id="submit-crops-btn" style="padding:11px 32px;background:var(--blue);color:#fff;font-family:'Titillium Web',sans-serif;font-size:14px;font-weight:700;letter-spacing:.8px;border:none;border-radius:8px;cursor:pointer;transition:background .15s;">Submit Crops ▶</button>
+        <button id="add-photos-btn" style="padding:11px 22px;background:#fff;color:var(--blue);font-family:'Titillium Web',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;border:1.5px solid var(--blue);border-radius:8px;cursor:pointer;transition:background .15s,color .15s;">＋ Add More Photos</button>
+        <input type="file" id="add-photos-input" accept="image/*,.pdf" style="display:none;">
+        <div id="add-photos-progress" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);display:none;"></div>
+      </div>
+      <div id="crop-grid"></div>
+    </div>
+
+    <!-- Stage 2: analysis -->
+    <div id="stage-analysis" style="display:none;">
+      <div id="adjust-hint" style="font-size:11px;color:var(--text-2);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 14px;margin-bottom:16px;line-height:1.5;display:none;">
+        Coil pixels detected automatically using L* inflection, a* top-15%, and b* top-15% rules. Toggle the <strong style="color:#50c878;">green</strong> mask with <strong>👁 Mask</strong>. Click <strong>✕</strong> to remove a coil. Use the tabs to explore histograms.
+      </div>
+      <div id="view-tabs" style="display:none;">
+        <button class="vtab vtab-active" data-tab="crops">Crops</button>
+        <button class="vtab" data-tab="histogram-L">L* Histogram</button>
+        <button class="vtab" data-tab="histogram-L-shifted">L* Shifted</button>
+        <button class="vtab" data-tab="histogram-a">a* Histogram</button>
+        <button class="vtab" data-tab="histogram-b">b* Histogram</button>
+        <button class="vtab" data-tab="histogram-b-shifted">b* Shifted</button>
+        <button class="vtab" data-tab="color-score">Darkness Score</button>
+        <button class="vtab" data-tab="ab-score">Color Score</button>
+        <button class="vtab" data-tab="glare-score">Glare Score</button>
+        <button class="vtab" data-tab="all-results">All Results</button>
+        <button class="vtab" data-tab="best-coil">⭐ Best</button>
+        <button class="vtab" data-tab="info">ⓘ Info</button>
+      </div>
+      <div id="view-crops"><div class="coil-grid" id="adjust-grid"></div></div>
+      <div id="view-histogram-L" style="display:none;"></div>
+      <div id="view-histogram-L-shifted" style="display:none;"></div>
+      <div id="view-histogram-a" style="display:none;"></div>
+      <div id="view-histogram-b" style="display:none;"></div>
+      <div id="view-histogram-b-shifted" style="display:none;"></div>
+      <div id="view-color-score" style="display:none;"></div>
+      <div id="view-ab-score" style="display:none;"></div>
+      <div id="view-glare-score" style="display:none;"></div>
+      <div id="view-all-results" style="display:none;"></div>
+      <div id="view-best-coil"   style="display:none;"></div>
+      <div id="view-info" style="display:none;"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let currentCanvas = null, pdfDoc = null, results = [];
+
+// ── File loading ─────────────────────────────────────
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click',  () => fileInput.click());
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+async function handleFile(file) {
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    pdfDoc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    await buildThumbs();
+    document.getElementById('pdf-controls').classList.add('show');
+  } else {
+    pdfDoc = null;
+    document.getElementById('pdf-controls').classList.remove('show');
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      currentCanvas = c;
+      preview(c);
+    };
+    img.src = URL.createObjectURL(file);
+  }
+  document.getElementById('analyze-btn').classList.add('show');
+}
+
+async function buildThumbs() {
+  const strip = document.getElementById('pdf-thumb-strip'); strip.innerHTML = '';
+  for (let i = 0; i < pdfDoc.numPages; i++) {
+    const c   = await renderPage(i, 0.12);
+    const img = document.createElement('img');
+    img.className = 'pdf-thumb' + (i === 0 ? ' selected' : '');
+    img.src = c.toDataURL(); img.dataset.page = i;
+    img.addEventListener('click', async () => {
+      document.querySelectorAll('.pdf-thumb').forEach(t => t.classList.remove('selected'));
+      img.classList.add('selected');
+      currentCanvas = await renderPage(+img.dataset.page, 2.0);
+      preview(currentCanvas);
+    });
+    strip.appendChild(img);
+  }
+  currentCanvas = await renderPage(0, 2.0); preview(currentCanvas);
+}
+async function renderPage(idx, scale) {
+  const page = await pdfDoc.getPage(idx + 1), vp = page.getViewport({ scale });
+  const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+  await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+  return c;
+}
+function preview(canvas) {
+  dropZone.style.padding = '14px';
+  const old = dropZone.querySelector('.prev-img'); if (old) old.remove();
+  const img = document.createElement('img'); img.className = 'prev-img';
+  img.style.cssText = 'max-width:100%;max-height:180px;border-radius:6px;display:block;margin:8px auto 0;';
+  img.src = canvas.toDataURL('image/jpeg', 0.5); dropZone.appendChild(img);
+}
+
+// ── Progress ─────────────────────────────────────────
+function setProgress(pct, msg) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = msg;
+}
+
+// ── findImageBlocks — ported directly from glassware app ─────────────────
+// White-background block finder with column-gap splitting and
+// uniform-column sub-split for merged crops.
+function findImageBlocks(canvas) {
+  const W = canvas.width, H = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, W, H).data;
+  const WH_THRESH = 248;
+
+  // Per-row non-white pixel count
+  const rowNW = new Int32Array(H);
+  for (let y = 0; y < H; y++) {
+    let c = 0;
+    for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if ((d[i] + d[i+1] + d[i+2]) / 3 < WH_THRESH) c++; }
+    rowNW[y] = c;
+  }
+  const minNW = Math.round(W * 0.05);
+  const rowBands = []; let rStart = null;
+  for (let y = 0; y < H; y++) {
+    if (rowNW[y] > minNW && rStart === null) rStart = y;
+    else if (rowNW[y] <= minNW && rStart !== null) { if (y - rStart > 50) rowBands.push([rStart, y]); rStart = null; }
+  }
+  if (rStart !== null && H - rStart > 50) rowBands.push([rStart, H]);
+
+  const rawBlocks = [];
+  for (const [ry1, ry2] of rowBands) {
+    const colNW = new Int32Array(W);
+    for (let x = 0; x < W; x++) {
+      let c = 0;
+      for (let y = ry1; y < ry2; y++) { const i = (y * W + x) * 4; if ((d[i] + d[i+1] + d[i+2]) / 3 < WH_THRESH) c++; }
+      colNW[x] = c;
+    }
+    // Low threshold (1% of band height) so narrow white gaps split adjacent coils
+    const minNWc = Math.round((ry2 - ry1) * 0.01);
+    const spans = []; let cStart = null;
+    for (let x = 0; x < W; x++) {
+      if (colNW[x] > minNWc && cStart === null) cStart = x;
+      else if (colNW[x] <= minNWc && cStart !== null) { if (x - cStart > 20) spans.push([cStart, x]); cStart = null; }
+    }
+    if (cStart !== null && W - cStart > 20) spans.push([cStart, W]);
+    for (const [cx1, cx2] of spans) rawBlocks.push({ x: cx1, y: ry1, w: cx2 - cx1, h: ry2 - ry1 });
+  }
+
+  if (rawBlocks.length === 0) return rawBlocks;
+
+  // Sub-split blocks wider than 1.5× median using uniform-column detection
+  const widths = [...rawBlocks].map(t => t.w).sort((a, b) => a - b);
+  const medianW = widths[Math.floor(widths.length / 2)];
+  const splitThresh = medianW * 1.5;
+  const UNIFORM_TOL = 15;
+
+  function colIsUniform(absX, absY, h) {
+    const step = Math.max(1, Math.floor(h / 40));
+    let rMin=255,rMax=0,gMin=255,gMax=0,bMin=255,bMax=0;
+    for (let y = absY; y < absY + h; y += step) {
+      const i = (y * W + absX) * 4;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      if (r<rMin) rMin=r; if (r>rMax) rMax=r;
+      if (g<gMin) gMin=g; if (g>gMax) gMax=g;
+      if (b<bMin) bMin=b; if (b>bMax) bMax=b;
+    }
+    return (rMax-rMin) <= UNIFORM_TOL && (gMax-gMin) <= UNIFORM_TOL && (bMax-bMin) <= UNIFORM_TOL;
+  }
+
+  function splitOnUniform(t) {
+    if (t.w <= splitThresh) return [t];
+    const uniSet = new Set();
+    for (let x = 0; x < t.w; x++) { if (colIsUniform(t.x + x, t.y, t.h)) uniSet.add(x); }
+    if (uniSet.size === 0) return [t];
+    const pieces = []; let spanStart = 0, inUni = false;
+    for (let x = 0; x <= t.w; x++) {
+      const uni = uniSet.has(x);
+      if (!inUni && uni)  { if (x - spanStart > 10) pieces.push({ x: t.x + spanStart, y: t.y, w: x - spanStart, h: t.h }); inUni = true; }
+      else if (inUni && !uni) { spanStart = x; inUni = false; }
+    }
+    if (!inUni && t.w - spanStart > 10) pieces.push({ x: t.x + spanStart, y: t.y, w: t.w - spanStart, h: t.h });
+    if (pieces.length <= 1) return [t];
+    const result = []; for (const p of pieces) result.push(...splitOnUniform(p)); return result;
+  }
+
+  const blocks = []; for (const t of rawBlocks) blocks.push(...splitOnUniform(t)); return blocks;
+}
+
+// ── trimWhiteBorders — ported directly from glassware app ───────────────
+// Scans outward from the image centre; stops the first time a row/col is
+// uniform (all pixels within TOL of each other) — that's background.
+function trimWhiteBorders(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const TOL = 12;
+
+  function rowUniform(y) {
+    let rMin=255,rMax=0,gMin=255,gMax=0,bMin=255,bMax=0;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, r = d[i], g = d[i+1], b = d[i+2];
+      if(r<rMin)rMin=r; if(r>rMax)rMax=r; if(g<gMin)gMin=g; if(g>gMax)gMax=g; if(b<bMin)bMin=b; if(b>bMax)bMax=b;
+    }
+    return (rMax-rMin) <= TOL && (gMax-gMin) <= TOL && (bMax-bMin) <= TOL;
+  }
+  function colUniform(x) {
+    let rMin=255,rMax=0,gMin=255,gMax=0,bMin=255,bMax=0;
+    for (let y = 0; y < h; y++) {
+      const i = (y * w + x) * 4, r = d[i], g = d[i+1], b = d[i+2];
+      if(r<rMin)rMin=r; if(r>rMax)rMax=r; if(g<gMin)gMin=g; if(g>gMax)gMax=g; if(b<bMin)bMin=b; if(b>bMax)bMax=b;
+    }
+    return (rMax-rMin) <= TOL && (gMax-gMin) <= TOL && (bMax-bMin) <= TOL;
+  }
+
+  const cy = Math.round(h / 2), cx = Math.round(w / 2);
+  let top = 0, bot = h, left = 0, right = w;
+  for (let y = cy; y >= 0; y--)   { if (rowUniform(y)) { top  = y + 1; break; } }
+  for (let y = cy; y < h; y++)    { if (rowUniform(y)) { bot  = y;     break; } }
+  for (let x = cx; x >= 0; x--)   { if (colUniform(x)) { left = x + 1; break; } }
+  for (let x = cx; x < w; x++)    { if (colUniform(x)) { right = x;   break; } }
+
+  if (top === 0 && bot === h && left === 0 && right === w) return canvas;
+  const cw = Math.max(1, right - left), ch = Math.max(1, bot - top);
+  const out = document.createElement('canvas'); out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(canvas, left, top, cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+// ── L* inflection mode helper ─────────────────────────
+// Finds the centre of the mode bin in the 30–100 L* range
+// using the same 20-bin histogram as detectCoilMask and the
+// display histograms.  This is the background peak used both
+// for the coil detection threshold and for the L* shift in scoring.
+function computeLInflectionMode(d, total) {
+  let minL = Infinity, maxL = -Infinity;
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    if (L < minL) minL = L;
+    if (L > maxL) maxL = L;
+  }
+  if (maxL === minL) maxL = minL + 1;
+  const binW = (maxL - minL) / 20;
+  const lBins = new Float32Array(20);
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    lBins[Math.min(19, Math.floor((L - minL) / binW))]++;
+  }
+  const lProps = lBins.map(c => c / total);
+  let modeIdx = -1;
+  for (let b = 0; b < 20; b++) {
+    const binLo = minL + b * binW;
+    const binHi = binLo + binW;
+    if (binHi <= 30 || binLo >= 100) continue;
+    if (modeIdx === -1 || lProps[b] > lProps[modeIdx]) modeIdx = b;
+  }
+  if (modeIdx === -1) modeIdx = 19;
+  // Return the centre of the mode bin
+  return minL + (modeIdx + 0.5) * binW;
+}
+function rgbToLab(r, g, b) {
+  function lin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  const R = lin(r), G = lin(g), B2 = lin(b);
+  const X = (R * 0.4124 + G * 0.3576 + B2 * 0.1805) / 0.95047;
+  const Y = (R * 0.2126 + G * 0.7152 + B2 * 0.0722) / 1.00000;
+  const Z = (R * 0.0193 + G * 0.1192 + B2 * 0.9505) / 1.08883;
+  function f(t) { return t > 0.008856 ? Math.pow(t, 1/3) : (7.787 * t + 16/116); }
+  const fx = f(X), fy = f(Y), fz = f(Z);
+  return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+
+// ── Detect coil pixels ────────────────────────────────
+// A pixel is coil if any of:
+//   a* > 2
+//   b* > 7
+//   L* <= lThresh  (derived from histogram inflection walk)
+// Returns { mask, coilCount, coilFraction, w, h, thresh }
+function detectCoilMask(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const total = w * h;
+
+  // ── L* threshold: same 20-bin histogram as the display ──
+  // Find actual min/max L* in the image
+  let minL = Infinity, maxL = -Infinity;
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    if (L < minL) minL = L;
+    if (L > maxL) maxL = L;
+  }
+  if (maxL === minL) maxL = minL + 1;
+  const binW = (maxL - minL) / 20;
+
+  // Build 20-bin histogram — exactly matching what the display shows
+  const lBins = new Float32Array(20);
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    lBins[Math.min(19, Math.floor((L - minL) / binW))]++;
+  }
+  const lProps = lBins.map(c => c / total);
+
+  // Find the mode bin whose L* range overlaps 30–100
+  let modeIdx = -1;
+  for (let b = 0; b < 20; b++) {
+    const binLo = minL + b * binW;
+    const binHi = binLo + binW;
+    if (binHi <= 30 || binLo >= 100) continue; // outside 30–100
+    if (modeIdx === -1 || lProps[b] > lProps[modeIdx]) modeIdx = b;
+  }
+  if (modeIdx === -1) modeIdx = 19; // fallback: use rightmost bin
+
+  // Walk left: compare each pair of adjacent bins (right, left).
+  // Stop when left > right — use the top edge of the right bin as lThresh.
+  // Fallback: use the top edge of the bin just left of the mode.
+  let lThresh = minL + modeIdx * binW; // fallback: top edge of bin left of mode
+  let right = modeIdx - 1;
+  for (let left = modeIdx - 2; left >= 0; left--) {
+    if (lProps[left] > lProps[right]) {
+      lThresh = minL + left * binW - 2; // bottom edge of the first increasing bin minus 2
+      break;
+    }
+    right = left;
+  }
+
+  const thresh = { bHiThresh: 7, lThresh };
+
+  const mask = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const lab = rgbToLab(d[i], d[i+1], d[i+2]);
+      if (lab.b > thresh.bHiThresh ||
+          lab.L <= thresh.lThresh) {
+        mask[y * w + x] = 1;
+      }
+    }
+  }
+
+  const problemRow = new Uint8Array(h);
+  const problemCol = new Uint8Array(w);
+  for (let y = 0; y < h; y++) {
+    let all = true;
+    for (let x = 0; x < w; x++) { if (mask[y * w + x] !== 1) { all = false; break; } }
+    if (all) problemRow[y] = 1;
+  }
+  for (let x = 0; x < w; x++) {
+    let all = true;
+    for (let y = 0; y < h; y++) { if (mask[y * w + x] !== 1) { all = false; break; } }
+    if (all) problemCol[x] = 1;
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (problemRow[y] || problemCol[x]) mask[y * w + x] = 0;
+    }
+  }
+
+  let coilCount = 0, validTotal = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!problemRow[y] && !problemCol[x]) {
+        validTotal++;
+        if (mask[y * w + x] === 1) coilCount++;
+      }
+    }
+  }
+
+  const coilFraction = validTotal > 0 ? coilCount / validTotal : 0;
+  return { mask, coilCount, coilFraction, w, h, thresh };
+}
+
+// ── Draw coil mask overlay ────────────────────────────
+// Green tint on detected coil pixels, transparent elsewhere.
+function drawMaskOverlay(overlay, { mask, w, h }) {
+  overlay.width = w; overlay.height = h;
+  const ctx = overlay.getContext('2d');
+  const out = ctx.createImageData(w, h);
+  const od  = out.data;
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i]) {
+      od[i*4]   = 80;
+      od[i*4+1] = 200;
+      od[i*4+2] = 80;
+      od[i*4+3] = 90;   // ~35% alpha
+    }
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
+// ── Pink border overlay ───────────────────────────────
+function drawBorder(overlay, w, h, bx0, by0, bx1, by1) {
+  overlay.width = w; overlay.height = h;
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(255,20,147,0.92)'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(bx0 + 0.5, by0 + 0.5, bx1 - bx0 - 1, by1 - by0 - 1);
+}
+
+// ── Draggable highlights ──────────────────────────────
+function makeDraggable(hitCanvas, visOverlay, r, redrawFn) {
+  const HIT = 6;
+  function toImg(e) {
+    const rect = hitCanvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return { px: (src.clientX - rect.left) / rect.width * r.w, py: (src.clientY - rect.top) / rect.height * r.h };
+  }
+  function nearEdge(px, py) {
+    const inX = px >= r.bx0 - HIT && px <= r.bx1 + HIT;
+    const inY = py >= r.by0 - HIT && py <= r.by1 + HIT;
+    if (!inX && !inY) return null;
+    if (inX && Math.abs(py - r.by0) <= HIT) return 'top';
+    if (inX && Math.abs(py - r.by1) <= HIT) return 'bottom';
+    if (inY && Math.abs(px - r.bx0) <= HIT) return 'left';
+    if (inY && Math.abs(px - r.bx1) <= HIT) return 'right';
+    return null;
+  }
+  let drag = null;
+  function syncPE(e) {
+    if (drag) return;
+    const { px, py } = toImg(e);
+    const edge = nearEdge(px, py);
+    hitCanvas.style.pointerEvents = edge ? 'auto' : 'none';
+    hitCanvas.style.cursor = edge === 'top' || edge === 'bottom' ? 'ns-resize' : edge ? 'ew-resize' : 'default';
+  }
+  hitCanvas.parentElement.addEventListener('mousemove', syncPE);
+  hitCanvas.addEventListener('mousedown', e => {
+    const { px, py } = toImg(e);
+    const edge = nearEdge(px, py);
+    if (!edge) return;
+    e.preventDefault(); e.stopPropagation(); drag = edge;
+  });
+  function onMove(e) {
+    if (!drag) return;
+    const src = e.touches ? e.touches[0] : e;
+    const rect = hitCanvas.getBoundingClientRect();
+    const px = (src.clientX - rect.left) / rect.width * r.w;
+    const py = (src.clientY - rect.top)  / rect.height * r.h;
+    if (drag === 'top')    r.by0 = Math.max(0,    Math.min(r.by1 - 10, Math.round(py)));
+    if (drag === 'bottom') r.by1 = Math.min(r.h,  Math.max(r.by0 + 10, Math.round(py)));
+    if (drag === 'left')   r.bx0 = Math.max(0,    Math.min(r.bx1 - 10, Math.round(px)));
+    if (drag === 'right')  r.bx1 = Math.min(r.w,  Math.max(r.bx0 + 10, Math.round(px)));
+    redrawFn();
+  }
+  window.addEventListener('mousemove', onMove);
+  hitCanvas.addEventListener('touchmove', onMove, { passive: false });
+  const stop = () => { drag = null; };
+  window.addEventListener('mouseup', stop);
+  hitCanvas.addEventListener('touchend', stop);
+}
+
+// ── Split modal ───────────────────────────────────────
+function openSplitModal(r) {
+  const existing = document.getElementById('split-modal-backdrop'); if (existing) existing.remove();
+  let splitX = Math.round(r.w / 2);
+  const backdrop = document.createElement('div'); backdrop.className = 'split-modal-backdrop'; backdrop.id = 'split-modal-backdrop';
+  const modal = document.createElement('div'); modal.className = 'split-modal';
+  modal.innerHTML = `<div class="split-modal-title">Split "${r.label}"</div>
+    <div class="split-modal-hint">Click or drag to position the split line (pink). The image will be cut into two separate coil crops.</div>`;
+  const cw = document.createElement('div'); cw.className = 'split-canvas-wrap';
+  const img = document.createElement('canvas'); img.width = r.w; img.height = r.h;
+  img.style.cssText = 'display:block;max-height:60vh;width:auto;max-width:80vw;';
+  img.getContext('2d').drawImage(r.crop, 0, 0);
+  cw.appendChild(img);
+  const line = document.createElement('div'); line.className = 'split-line'; cw.appendChild(line);
+  modal.appendChild(cw);
+  const btns = document.createElement('div'); btns.className = 'split-modal-btns';
+  const cancel = document.createElement('button'); cancel.textContent = 'Cancel'; cancel.className = 'btn-cancel-split';
+  const doBtn  = document.createElement('button'); doBtn.textContent  = '✂ Split Here'; doBtn.className = 'btn-do-split';
+  btns.appendChild(cancel); btns.appendChild(doBtn); modal.appendChild(btns); backdrop.appendChild(modal); document.body.appendChild(backdrop);
+
+  function posLine(imgX) {
+    splitX = Math.max(1, Math.min(r.w - 1, Math.round(imgX)));
+    const dispW = img.getBoundingClientRect().width || r.w;
+    line.style.left = Math.round(splitX / r.w * dispW) + 'px';
+  }
+  posLine(splitX);
+  function onMouse(e) {
+    e.preventDefault();
+    const rect = img.getBoundingClientRect(), src = e.touches ? e.touches[0] : e;
+    posLine((src.clientX - rect.left) / rect.width * r.w);
+  }
+  cw.addEventListener('mousedown', onMouse); cw.addEventListener('mousemove', e => { if (e.buttons) onMouse(e); });
+  cw.addEventListener('touchstart', onMouse, { passive: false }); cw.addEventListener('touchmove', onMouse, { passive: false });
+  cancel.addEventListener('click', () => backdrop.remove());
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+  doBtn.addEventListener('click', () => { backdrop.remove(); doSplit(r, splitX); });
+}
+
+function doSplit(r, splitX) {
+  function makeCrop(src, sx, w2, h) { const c = document.createElement('canvas'); c.width = w2; c.height = h; c.getContext('2d').drawImage(src, sx, 0, w2, h, 0, 0, w2, h); return c; }
+  const left  = makeCrop(r.crop, 0,       splitX,        r.h);
+  const right = makeCrop(r.crop, splitX,  r.w - splitX,  r.h);
+  function makeResult(crop) {
+    return { index: 0, label: '', crop, w: crop.width, h: crop.height, bx0: 0, by0: 0, bx1: crop.width, by1: crop.height, maskResult: null, bgLab: null, bgRgb: null, bgLab2: null, bgRgb2: null };
+  }
+  const leftR = makeResult(left), rightR = makeResult(right);
+  const idx = results.findIndex(x => x.index === r.index);
+  if (idx >= 0) results.splice(idx, 1, leftR, rightR); else results.push(leftR, rightR);
+  results.forEach((x, i) => { x.index = i + 1; x.label = `Coil ${i + 1}`; });
+  renderAdjustGrid();
+}
+
+// ── Detection ─────────────────────────────────────────
+document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
+async function runAnalysis() {
+  if (!currentCanvas) { alert('Please load an image or PDF first.'); return; }
+  const btn = document.getElementById('analyze-btn'); btn.disabled = true;
+  document.getElementById('progress-wrap').classList.add('show');
+  document.getElementById('results-section').classList.remove('show');
+  results = [];
+
+  setProgress(5, 'Finding image blocks…'); await tick();
+  const blocks = findImageBlocks(currentCanvas);
+  setProgress(30, `Found ${blocks.length} region(s). Cropping…`); await tick();
+
+  for (let i = 0; i < blocks.length; i++) {
+    const t = blocks[i];
+    let crop = document.createElement('canvas'); crop.width = t.w; crop.height = t.h;
+    crop.getContext('2d').drawImage(currentCanvas, t.x, t.y, t.w, t.h, 0, 0, t.w, t.h);
+    crop = trimWhiteBorders(crop);
+    results.push({ index: i + 1, label: `Coil ${i + 1}`, crop, w: crop.width, h: crop.height, bx0: 0, by0: 0, bx1: crop.width, by1: crop.height, maskResult: null, bgLab: null, bgRgb: null, bgLab2: null, bgRgb2: null });
+    setProgress(30 + Math.round((i + 1) / blocks.length * 65), `Coil ${i + 1} of ${blocks.length}…`); await tick();
+  }
+
+  setProgress(100, `${results.length} coil(s) — adjust crop highlights then click Submit Crops.`);
+  btn.disabled = false;
+  renderCropStage();
+}
+
+function tick() { return new Promise(r => setTimeout(r, 0)); }
+
+// ── Channel histogram ─────────────────────────────────
+// Computes a 20-bin histogram of L*, a*, or b* values across all
+// pixels in the crop canvas.  channel = 'L' | 'a' | 'b'.
+// Returns { bins, binEdges, totalPixels, minV, maxV, N, channel }
+function computeChannelHistogram(canvas, channel) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const N = 20;
+
+  function getVal(idx) {
+    const lab = rgbToLab(d[idx], d[idx+1], d[idx+2]);
+    return channel === 'L' ? lab.L : channel === 'a' ? lab.a : lab.b;
+  }
+
+  // First pass: find min and max
+  let minV = Infinity, maxV = -Infinity;
+  for (let i = 0; i < w * h; i++) {
+    const v = getVal(i * 4);
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+  if (maxV === minV) maxV = minV + 1;
+
+  const range = maxV - minV;
+  const binW  = range / N;
+  const bins  = new Array(N).fill(0);
+  for (let i = 0; i < w * h; i++) {
+    const v   = getVal(i * 4);
+    const bin = Math.min(N - 1, Math.floor((v - minV) / binW));
+    bins[bin]++;
+  }
+
+  const totalPixels = w * h;
+  const binEdges = Array.from({ length: N + 1 }, (_, k) => minV + k * binW);
+  return { bins, binEdges, totalPixels, minV, maxV, N, channel };
+}
+
+// Draw a single histogram onto a canvas element.
+// activeBin (optional) = index of the selected bar, drawn with a white outline.
+function drawHistogram(canvas, histData, label, activeBin) {
+  const { bins, binEdges, totalPixels, N } = histData;
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const PAD = { top: 18, right: 12, bottom: 36, left: 44 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top  - PAD.bottom;
+  const maxProp = Math.max(...bins) / totalPixels;
+  const barW    = chartW / N;
+
+  // Background
+  ctx.fillStyle = '#f7f8fc';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines + Y axis labels
+  ctx.strokeStyle = '#dce1ee'; ctx.lineWidth = 1;
+  ctx.fillStyle   = '#5a6580'; ctx.font = '9px "DM Mono",monospace'; ctx.textAlign = 'right';
+  const yTicks = 4;
+  for (let t = 0; t <= yTicks; t++) {
+    const prop = (maxProp / yTicks) * t;
+    const yy   = PAD.top + chartH - (prop / maxProp) * chartH;
+    ctx.beginPath(); ctx.moveTo(PAD.left, yy); ctx.lineTo(PAD.left + chartW, yy); ctx.stroke();
+    ctx.fillText((prop * 100).toFixed(1) + '%', PAD.left - 4, yy + 3);
+  }
+
+  // Bars
+  bins.forEach((count, i) => {
+    const prop = count / totalPixels;
+    const barH = (prop / maxProp) * chartH;
+    const x    = PAD.left + i * barW;
+    const y    = PAD.top  + chartH - barH;
+    const t    = i / (N - 1);
+    const r2   = Math.round(60  + t * 185);
+    const g    = Math.round(30  + t * 155);
+    const b    = Math.round(10  + t * 155);
+    ctx.fillStyle = `rgb(${r2},${g},${b})`;
+    ctx.fillRect(x + 1, y, barW - 2, barH);
+
+    // White outline on active bar
+    if (i === activeBin) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1.5, y + 0.5, barW - 3, barH - 1);
+      ctx.strokeStyle = '#234083'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y - 0.5, barW - 1, barH + 1);
+    }
+  });
+
+  // X axis labels every 5th bin edge
+  ctx.fillStyle = '#5a6580'; ctx.font = '9px "DM Mono",monospace'; ctx.textAlign = 'center';
+  for (let i = 0; i <= N; i += 5) {
+    ctx.fillText(binEdges[i].toFixed(0), PAD.left + i * barW, PAD.top + chartH + 14);
+  }
+
+  // Axis lines
+  ctx.strokeStyle = '#aab2c8'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top); ctx.lineTo(PAD.left, PAD.top + chartH);
+  ctx.lineTo(PAD.left + chartW, PAD.top + chartH);
+  ctx.stroke();
+
+  // Coil label
+  ctx.fillStyle = '#234083'; ctx.font = 'bold 10px "Titillium Web",sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(label, PAD.left + 2, PAD.top - 5);
+
+  // Active bin range label
+  if (activeBin !== undefined && activeBin !== null) {
+    const loL = binEdges[activeBin].toFixed(1);
+    const hiL = binEdges[activeBin + 1].toFixed(1);
+    const pct = (bins[activeBin] / totalPixels * 100).toFixed(1);
+    ctx.fillStyle = '#234083'; ctx.font = '9px "DM Mono",monospace'; ctx.textAlign = 'right';
+    ctx.fillText(`L* ${loL}–${hiL}  ${pct}%`, W - PAD.right, PAD.top - 5);
+  }
+
+  // X axis title
+  ctx.fillStyle = '#5a6580'; ctx.font = '9px "DM Mono",monospace'; ctx.textAlign = 'center';
+  ctx.fillText(histData.channel || 'L*', PAD.left + chartW / 2, H - 4);
+}
+
+// Draw the pixel highlight for a selected bin onto a canvas.
+// Pixels inside the bin are shown at full colour; all others are dimmed.
+function drawBinHighlight(highlightCanvas, cropCanvas, histData, binIdx) {
+  const cw = cropCanvas.width, ch = cropCanvas.height;
+  highlightCanvas.width  = cw;
+  highlightCanvas.height = ch;
+  const srcData = cropCanvas.getContext('2d').getImageData(0, 0, cw, ch);
+  const src = srcData.data;
+  const dst = new Uint8ClampedArray(src.length);
+  const { binEdges, channel } = histData;
+  const loV = binEdges[binIdx];
+  const hiV = binEdges[binIdx + 1];
+
+  for (let i = 0; i < cw * ch; i++) {
+    const r = src[i*4], g = src[i*4+1], b = src[i*4+2];
+    const lab  = rgbToLab(r, g, b);
+    const val  = channel === 'L' ? lab.L : channel === 'a' ? lab.a : lab.b;
+    const inBin = val >= loV && (val < hiV || binIdx === histData.N - 1);
+    if (inBin) {
+      dst[i*4]   = r;
+      dst[i*4+1] = g;
+      dst[i*4+2] = b;
+      dst[i*4+3] = 255;
+    } else {
+      const grey = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+      const dim  = Math.round(grey * 0.35);
+      dst[i*4]   = dim;
+      dst[i*4+1] = dim;
+      dst[i*4+2] = dim;
+      dst[i*4+3] = 255;
+    }
+  }
+  highlightCanvas.getContext('2d').putImageData(new ImageData(dst, cw, ch), 0, 0);
+}
+
+// ── Render histogram tab ──────────────────────────────
+// channel = 'L' | 'a' | 'b'
+function renderHistogramTab(channel) {
+  const containerId = `view-histogram-${channel}`;
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(auto-fill,minmax(300px,1fr))';
+  container.style.gap = '14px';
+
+  results.forEach(r => {
+    const hist = computeChannelHistogram(r.crop, channel);
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px;';
+
+    const histCanvas = document.createElement('canvas');
+    histCanvas.width = 280; histCanvas.height = 160;
+    histCanvas.style.cssText = 'display:block;width:100%;height:auto;cursor:pointer;';
+    card.appendChild(histCanvas);
+
+    const hlCanvas = document.createElement('canvas');
+    hlCanvas.style.cssText = 'display:none;width:100%;height:auto;border-radius:4px;border:1px solid var(--border);';
+    card.appendChild(hlCanvas);
+
+    const hlLbl = document.createElement('div');
+    hlLbl.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);display:none;';
+    card.appendChild(hlLbl);
+
+    container.appendChild(card);
+    drawHistogram(histCanvas, hist, r.label, null);
+
+    let activeBin = null;
+    const PAD    = { top: 18, right: 12, bottom: 36, left: 44 };
+    const chartW = histCanvas.width - PAD.left - PAD.right;
+    const barW   = chartW / hist.N;
+
+    histCanvas.addEventListener('click', e => {
+      const rect = histCanvas.getBoundingClientRect();
+      const cx   = (e.clientX - rect.left) / rect.width  * histCanvas.width;
+      const cy   = (e.clientY - rect.top)  / rect.height * histCanvas.height;
+      const chartH = histCanvas.height - PAD.top - PAD.bottom;
+      if (cx < PAD.left || cx > PAD.left + chartW) return;
+      if (cy < PAD.top  || cy > PAD.top + chartH)  return;
+      const bin = Math.min(hist.N - 1, Math.floor((cx - PAD.left) / barW));
+      if (bin === activeBin) {
+        activeBin = null;
+        hlCanvas.style.display = 'none';
+        hlLbl.style.display    = 'none';
+      } else {
+        activeBin = bin;
+        drawBinHighlight(hlCanvas, r.crop, hist, bin);
+        hlCanvas.style.display = 'block';
+        const pct = (hist.bins[bin] / hist.totalPixels * 100).toFixed(1);
+        hlLbl.textContent = `Bin ${bin + 1}/20 · ${channel}* ${hist.binEdges[bin].toFixed(1)}–${hist.binEdges[bin+1].toFixed(1)} · ${pct}% of pixels`;
+        hlLbl.style.display = '';
+      }
+      drawHistogram(histCanvas, hist, r.label, activeBin);
+    });
+  });
+}
+
+// ── Shifted L* histogram tab ──────────────────────────
+function renderShiftedLHistogramTab() {
+  const container = document.getElementById('view-histogram-L-shifted');
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(auto-fill,minmax(300px,1fr))';
+  container.style.gap = '14px';
+
+  const note = document.createElement('div');
+  note.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-2);padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;line-height:1.5;';
+  note.innerHTML = '<strong>Shifted L* Histogram</strong> — each photo\'s L* values are shifted so the mode of the all-pixel distribution sits at 0 (the background peak). Darker regions (deposits) go negative; brighter regions go positive. Removes background brightness bias.';
+  container.appendChild(note);
+
+  results.forEach(r => {
+    const lThresh = r.maskResult ? r.maskResult.thresh.lThresh : 0;
+    const hist = computeShiftedLHistogram(r.crop, lThresh);
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px;';
+
+    const shiftNote = document.createElement('div');
+    shiftNote.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);';
+    shiftNote.textContent = `shift: ${hist.lShift > 0 ? '+' : ''}${hist.lShift.toFixed(1)} (background mode subtracted)`;
+    card.appendChild(shiftNote);
+
+    const histCanvas = document.createElement('canvas');
+    histCanvas.width = 280; histCanvas.height = 160;
+    histCanvas.style.cssText = 'display:block;width:100%;height:auto;cursor:pointer;';
+    card.appendChild(histCanvas);
+
+    const hlCanvas = document.createElement('canvas');
+    hlCanvas.style.cssText = 'display:none;width:100%;height:auto;border-radius:4px;border:1px solid var(--border);';
+    card.appendChild(hlCanvas);
+
+    const hlLbl = document.createElement('div');
+    hlLbl.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);display:none;';
+    card.appendChild(hlLbl);
+
+    container.appendChild(card);
+    drawHistogram(histCanvas, hist, r.label, null);
+
+    let activeBin = null;
+    const PAD  = { top: 18, right: 12, bottom: 36, left: 44 };
+    const chartW = histCanvas.width - PAD.left - PAD.right;
+    const barW   = chartW / hist.N;
+
+    histCanvas.addEventListener('click', e => {
+      const rect = histCanvas.getBoundingClientRect();
+      const cx   = (e.clientX - rect.left) / rect.width  * histCanvas.width;
+      const cy   = (e.clientY - rect.top)  / rect.height * histCanvas.height;
+      const chartH = histCanvas.height - PAD.top - PAD.bottom;
+      if (cx < PAD.left || cx > PAD.left + chartW) return;
+      if (cy < PAD.top  || cy > PAD.top + chartH)  return;
+      const bin = Math.min(hist.N - 1, Math.floor((cx - PAD.left) / barW));
+      if (bin === activeBin) {
+        activeBin = null;
+        hlCanvas.style.display = 'none';
+        hlLbl.style.display    = 'none';
+      } else {
+        activeBin = bin;
+        drawBinHighlight(hlCanvas, r.crop, hist, bin);
+        hlCanvas.style.display = 'block';
+        const pct = (hist.bins[bin] / hist.totalPixels * 100).toFixed(1);
+        hlLbl.textContent = `Bin ${bin+1}/20 · L* (shifted) ${hist.binEdges[bin].toFixed(1)}–${hist.binEdges[bin+1].toFixed(1)} · ${pct}%`;
+        hlLbl.style.display = '';
+      }
+      drawHistogram(histCanvas, hist, r.label, activeBin);
+    });
+  });
+}
+
+// ── Shifted b* histogram tab ──────────────────────────
+// Shows the b* histogram with each photo's distribution shifted so
+// its mode (= background colour) lands at 0.  All cards use the same
+// x-axis range so you can compare across coils.
+function renderShiftedBHistogramTab() {
+  const containerId = 'view-histogram-b-shifted';
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(auto-fill,minmax(300px,1fr))';
+  container.style.gap = '14px';
+
+  // Note explaining the shift
+  const note = document.createElement('div');
+  note.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--text-2);padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;line-height:1.5;';
+  note.innerHTML = '<strong>Shifted b* Histogram</strong> — each photo\'s b* values are shifted so the mode of the all-pixel distribution sits at 0. This removes background colour bias, making coil copper/deposit signal directly comparable across photos with different paper tones.';
+  container.appendChild(note);
+
+  results.forEach(r => {
+    const lThresh = r.maskResult ? r.maskResult.thresh.lThresh : 0;
+    const hist = computeShiftedBHistogram(r.crop, lThresh);
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px;';
+
+    // Shift annotation
+    const shiftNote = document.createElement('div');
+    shiftNote.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);';
+    shiftNote.textContent = `shift: ${hist.bShift > 0 ? '+' : ''}${hist.bShift.toFixed(1)} (background mode subtracted)`;
+    card.appendChild(shiftNote);
+
+    const histCanvas = document.createElement('canvas');
+    histCanvas.width = 280; histCanvas.height = 160;
+    histCanvas.style.cssText = 'display:block;width:100%;height:auto;cursor:pointer;';
+    card.appendChild(histCanvas);
+
+    const hlCanvas = document.createElement('canvas');
+    hlCanvas.style.cssText = 'display:none;width:100%;height:auto;border-radius:4px;border:1px solid var(--border);';
+    card.appendChild(hlCanvas);
+
+    const hlLbl = document.createElement('div');
+    hlLbl.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);display:none;';
+    card.appendChild(hlLbl);
+
+    container.appendChild(card);
+    drawHistogram(histCanvas, hist, r.label, null);
+
+    let activeBin = null;
+    const PAD  = { top: 18, right: 12, bottom: 36, left: 44 };
+    const chartW = histCanvas.width - PAD.left - PAD.right;
+    const barW   = chartW / hist.N;
+
+    histCanvas.addEventListener('click', e => {
+      const rect = histCanvas.getBoundingClientRect();
+      const cx   = (e.clientX - rect.left) / rect.width  * histCanvas.width;
+      const cy   = (e.clientY - rect.top)  / rect.height * histCanvas.height;
+      const chartH = histCanvas.height - PAD.top - PAD.bottom;
+      if (cx < PAD.left || cx > PAD.left + chartW) return;
+      if (cy < PAD.top  || cy > PAD.top + chartH)  return;
+      const bin = Math.min(hist.N - 1, Math.floor((cx - PAD.left) / barW));
+      if (bin === activeBin) {
+        activeBin = null;
+        hlCanvas.style.display = 'none';
+        hlLbl.style.display    = 'none';
+      } else {
+        activeBin = bin;
+        // Highlight uses the shifted histogram so bin ranges are shifted
+        drawBinHighlight(hlCanvas, r.crop, hist, bin);
+        hlCanvas.style.display = 'block';
+        const pct = (hist.bins[bin] / hist.totalPixels * 100).toFixed(1);
+        hlLbl.textContent = `Bin ${bin+1}/20 · b* (shifted) ${hist.binEdges[bin].toFixed(1)}–${hist.binEdges[bin+1].toFixed(1)} · ${pct}%`;
+        hlLbl.style.display = '';
+      }
+      drawHistogram(histCanvas, hist, r.label, activeBin);
+    });
+  });
+}
+
+// ── Groups state ─────────────────────────────────────
+let groups = [];   // [{ name, memberIndices[] }]  — all coils are members, no base
+let groupCounter = 0;
+
+// ── Fixed reference baseline (replaces per-group base coil) ──
+const REF_L  = -33;    // reference shifted L*
+const REF_B  =  11;    // reference shifted b*
+const REF_GLARE_LSUM = 32000;  // reference glare L* sum
+
+// ── Normalisation toggle state ─────────────────────────
+let darknessNormalise = true;   // L* background shift on/off
+let colorNormalise    = true;   // b* background shift on/off
+
+// ── Compute coil score (mean L* of coil pixels) ───────
+// Background pixels = L* more than 2 bins above the coil detection
+// threshold AND b* ≤ 7 (not warm/copper coloured).
+// Returns the mean L* of those pixels — this is the true background
+// reference used to normalise L* scores across photos.
+function computeBgLShift(d, total, lThresh) {
+  // Build 20-bin L* histogram to find bin width and sparse-bin cutoff
+  let minL = Infinity, maxL = -Infinity;
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    if (L < minL) minL = L;
+    if (L > maxL) maxL = L;
+  }
+  if (maxL === minL) maxL = minL + 1;
+  const binW = (maxL - minL) / 20;
+  const bgCutoff = lThresh + 2 * binW;  // two bins above the coil threshold
+
+  // Build histogram to find sparse bins in the 70–100 L* range
+  const lBins = new Float32Array(20);
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    lBins[Math.min(19, Math.floor((L - minL) / binW))]++;
+  }
+
+  // Find the leftmost bin in the 70–100 range that has < 3% of pixels.
+  // Any pixel at or to the right of that bin is excluded from background.
+  // This removes overexposed highlights / specular spots that aren't
+  // representative of the true background surface.
+  let sparseCutoff = Infinity;  // no cutoff by default
+  for (let b = 0; b < 20; b++) {
+    const binLo = minL + b * binW;
+    const binHi = binLo + binW;
+    if (binHi <= 70 || binLo >= 100) continue;   // only check 70–100 range
+    if (lBins[b] / total < 0.03) {
+      sparseCutoff = binLo;   // left edge of the first sparse bin
+      break;
+    }
+  }
+
+  let sumL = 0, cnt = 0;
+  for (let i = 0; i < total; i++) {
+    const lab = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]);
+    if (lab.L > bgCutoff && lab.b <= 7 && lab.L < sparseCutoff) {
+      sumL += lab.L; cnt++;
+    }
+  }
+  // Fallback: if no qualifying pixels found, use the bgCutoff itself
+  return cnt > 0 ? sumL / cnt : bgCutoff + binW;
+}
+
+function coilScore(r) {
+  if (!r.maskResult) return null;
+  const d    = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+  const mask = r.maskResult.mask;
+  const w = r.w, h = r.h;
+  const total = w * h;
+
+  // L* shift: use background normalisation if enabled, otherwise 0
+  const lShift = darknessNormalise
+    ? computeBgLShift(d, total, r.maskResult.thresh.lThresh)
+    : 0;
+
+  // ── Mean shifted L* and average RGB of coil pixels ────
+  let sumL = 0, sumR = 0, sumG = 0, sumB = 0, cnt = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i] !== 1) continue;
+    const pr = d[i*4], pg = d[i*4+1], pb = d[i*4+2];
+    sumL += (rgbToLab(pr, pg, pb).L - lShift);
+    sumR += pr; sumG += pg; sumB += pb;
+    cnt++;
+  }
+  if (cnt === 0) return null;
+  return {
+    meanL: sumL / cnt,
+    lShift,
+    avgR: Math.round(sumR / cnt),
+    avgG: Math.round(sumG / cnt),
+    avgB: Math.round(sumB / cnt),
+    cnt
+  };
+}
+
+function barColor(meanL) {
+  const t = Math.max(0, Math.min(1, (meanL - 20) / 60));
+  return `rgb(${Math.round(120+t*95)},${Math.round(50+t*65)},${Math.round(10+t*20)})`;
+}
+
+// ── Darkness score band thresholds ───────────────────
+// Three draggable dots defining four bands: Good / Moderate / Poor / Extremely Poor
+// Score 0 = same as base coil (perfect), 100 = L* of 5 (worst)
+let DARKNESS_BANDS = [25, 50, 75];
+const DARKNESS_COLORS = ['#27ae60', '#f1c40f', '#e67e22', '#c0392b'];
+const DARKNESS_LABELS = ['Good', 'Moderate', 'Poor', 'Extremely Poor'];
+
+function darknessBandColor(s) {
+  const [b1,b2,b3] = DARKNESS_BANDS;
+  if (s <= b1) return DARKNESS_COLORS[0];
+  if (s <= b2) return DARKNESS_COLORS[1];
+  if (s <= b3) return DARKNESS_COLORS[2];
+  return DARKNESS_COLORS[3];
+}
+function darknessBandLabel(s) {
+  const [b1,b2,b3] = DARKNESS_BANDS;
+  if (s <= b1) return DARKNESS_LABELS[0];
+  if (s <= b2) return DARKNESS_LABELS[1];
+  if (s <= b3) return DARKNESS_LABELS[2];
+  return DARKNESS_LABELS[3];
+}
+
+// Darkness score: 0 = same shifted L* as base, 100 = drop of 20 shifted-L* units.
+// Score = (baseL - coilL) / 20 * 100, clamped 0–100.
+function darknessScore(coilL) {
+  return Math.max(0, Math.min(100, Math.round((REF_L - coilL) / 20 * 100)));
+}
+
+// ── Band slider (3 dots, 4 colour segments, snaps to 5) ─
+function makeDarknessBandSlider(rerenderFn) {
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'margin-bottom:18px;user-select:none;';
+
+  // Header labels
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;justify-content:space-between;font-size:10px;font-weight:700;font-family:"DM Mono",monospace;color:var(--text-2);margin-bottom:4px;';
+  hdr.innerHTML = DARKNESS_LABELS.map((l,i) => `<span style="color:${DARKNESS_COLORS[i]}">${l}</span>`).join('');
+  wrapper.appendChild(hdr);
+
+  const outerRow = document.createElement('div');
+  outerRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+  const lbl0   = document.createElement('span'); lbl0.style.cssText   = 'font-size:10px;font-weight:700;font-family:"DM Mono",monospace;color:var(--text-2);flex-shrink:0;'; lbl0.textContent   = '0';
+  const lbl100 = document.createElement('span'); lbl100.style.cssText = 'font-size:10px;font-weight:700;font-family:"DM Mono",monospace;color:var(--text-2);flex-shrink:0;'; lbl100.textContent = '100';
+
+  const trackWrap = document.createElement('div');
+  trackWrap.style.cssText = 'position:relative;height:52px;flex:1;overflow:visible;';
+
+  const track = document.createElement('div');
+  track.style.cssText = 'position:absolute;top:20px;left:0;right:0;height:6px;border-radius:3px;overflow:hidden;display:flex;';
+  const segs = DARKNESS_COLORS.map(c => { const s = document.createElement('div'); s.style.cssText = `height:100%;background:${c};`; track.appendChild(s); return s; });
+  trackWrap.appendChild(track);
+
+  // Tick marks
+  for (let v = 0; v <= 100; v += 5) {
+    const isMajor = v % 25 === 0;
+    const tick = document.createElement('div');
+    tick.style.cssText = `position:absolute;left:${v}%;top:27px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;`;
+    const line = document.createElement('div');
+    line.style.cssText = `width:1.5px;height:${isMajor?8:5}px;background:var(--text);opacity:${isMajor?0.5:0.22};`;
+    tick.appendChild(line);
+    if (isMajor) { const lbl = document.createElement('div'); lbl.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);line-height:1;margin-top:1px;'; lbl.textContent = v; tick.appendChild(lbl); }
+    trackWrap.appendChild(tick);
+  }
+
+  // Three dots
+  const dots = [0,1,2].map(i => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;top:20px;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#ddd;border:2px solid #888;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5;overflow:visible;';
+    const t = document.createElement('div');
+    t.style.cssText = 'position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;font-size:11px;font-weight:700;font-family:"DM Mono",monospace;padding:2px 7px;border-radius:4px;pointer-events:none;white-space:nowrap;display:none;z-index:20;';
+    d.appendChild(t); trackWrap.appendChild(d); return d;
+  });
+
+  function updateVisuals() {
+    const edges = [0, ...DARKNESS_BANDS, 100];
+    for (let i = 0; i < 4; i++) segs[i].style.width = Math.max(0, edges[i+1] - edges[i]) + '%';
+    DARKNESS_BANDS.forEach((v,i) => dots[i].style.left = v + '%');
+  }
+
+  let dragging = false;
+  function startDrag(dotIdx, e) {
+    e.preventDefault(); e.stopPropagation(); dragging = true;
+    const rect = trackWrap.getBoundingClientRect();
+    const tip = dots[dotIdx].querySelector('div');
+    tip.style.display = 'block'; dots[dotIdx].style.cursor = 'grabbing';
+    function onMove(ev) {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const snapped = Math.round(Math.max(0, Math.min(100, (cx - rect.left) / rect.width * 100)) / 5) * 5;
+      DARKNESS_BANDS[dotIdx] = snapped; updateVisuals(); tip.textContent = snapped; rerenderFn();
+    }
+    function onUp() {
+      tip.style.display = 'none'; dots[dotIdx].style.cursor = 'grab';
+      document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
+      setTimeout(() => { dragging = false; }, 0);
+    }
+    document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, {passive:false}); document.addEventListener('touchend', onUp);
+  }
+  dots.forEach((d,i) => {
+    d.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(i, e); });
+    d.addEventListener('touchstart', e => { e.stopPropagation(); startDrag(i, e); }, {passive:false});
+    d.addEventListener('click', e => { e.stopPropagation(); if(dragging) return; const t=d.querySelector('div'); t.textContent=DARKNESS_BANDS[i]; t.style.display='block'; setTimeout(()=>t.style.display='none',1500); });
+  });
+  wrapper.addEventListener('click', e => e.stopPropagation());
+  wrapper.addEventListener('mousedown', e => e.stopPropagation());
+  wrapper.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+
+  outerRow.appendChild(lbl0); outerRow.appendChild(trackWrap); outerRow.appendChild(lbl100);
+  wrapper.appendChild(outerRow);
+  updateVisuals();
+  return wrapper;
+}
+
+// ── Darkness score tab ────────────────────────────────
+// ── Normalisation toggle button ───────────────────────
+function makeNormToggle(getFlag, setFlag, rerenderFn) {
+  const btn = document.createElement('button');
+  function update() {
+    const on = getFlag();
+    btn.textContent = on ? '📐 Normalisation: ON' : '📐 Normalisation: OFF';
+    btn.style.background = on ? 'var(--blue)' : '#fff';
+    btn.style.color      = on ? '#fff'         : 'var(--blue)';
+  }
+  btn.style.cssText = 'padding:6px 14px;font-family:"Titillium Web",sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--blue);border-radius:6px;cursor:pointer;margin-bottom:14px;transition:background .15s,color .15s;';
+  btn.addEventListener('click', () => { setFlag(!getFlag()); rerenderFn(); });
+  update();
+  return btn;
+}
+
+function renderColorScoreTab() {
+  const container = document.getElementById('view-color-score');
+  container.innerHTML = '';
+  container.appendChild(makeDarknessBandSlider(() => renderColorScoreTab()));
+  container.appendChild(makeNormToggle(() => darknessNormalise, v => { darknessNormalise = v; }, renderColorScoreTab));
+  container.appendChild(makeViewModeBtn(() => darknessSortMode, v => { darknessSortMode = v; }, renderColorScoreTab));
+
+  const scoreMap = {};
+  results.forEach(r => { const s = coilScore(r); if (s) scoreMap[r.index] = s; });
+  if (!Object.keys(scoreMap).length) { container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coil pixels detected yet.</div>'; return; }
+
+  if (darknessSortMode === 'sorted') {
+    const all = results.map(r => {
+      const s = scoreMap[r.index]; if (!s) return null;
+      return { r, s, ds: darknessScore(s.meanL) };
+    }).filter(Boolean).sort((a, b) => b.ds - a.ds);
+    all.forEach(({ r, s, ds }, i) =>
+      container.appendChild(makeSortedRow(r, ds, darknessBandColor(ds), darknessBandLabel(ds), i, groupNameOf(r))));
+  } else {
+    const assignedIndices = new Set(groups.flatMap(g => g.memberIndices));
+    const sections = [...groups.map(g => ({ name: g.name, coils: g.memberIndices.map(id => results.find(r => r.index === id)).filter(Boolean) }))];
+    const ung = results.filter(r => !assignedIndices.has(r.index) && scoreMap[r.index]);
+    if (ung.length) sections.push({ name: 'Ungrouped', coils: ung });
+    sections.forEach(sec => {
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--blue);color:#fff;border-radius:8px;margin-bottom:6px;cursor:pointer;user-select:none;';
+      hdr.innerHTML = `<span style="font-size:13px;font-weight:700;">${sec.name}</span><span style="font-size:11px;opacity:.7;">${sec.coils.length} coil${sec.coils.length!==1?'s':''} ▸</span>`;
+      container.appendChild(hdr);
+      const body = document.createElement('div'); body.style.cssText = 'margin-bottom:14px;display:none;'; container.appendChild(body);
+      let open = false;
+      hdr.addEventListener('click', () => { open=!open; body.style.display=open?'':'none'; hdr.querySelector('span:last-child').textContent=`${sec.coils.length} coil${sec.coils.length!==1?'s':''} ${open?'▾':'▸'}`; });
+      const strip = document.createElement('div'); strip.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px;';
+      sec.coils.forEach(r => { const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:80px;height:auto;border-radius:6px;border:1.5px solid var(--border);display:block;';t.getContext('2d').drawImage(r.crop,0,0);const n=document.createElement('div');n.style.cssText='font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);text-align:center;';n.textContent=r.label;w.appendChild(t);w.appendChild(n);strip.appendChild(w); });
+      body.appendChild(strip);
+      sec.coils.map(r => { const s=scoreMap[r.index]; if(!s) return null; return {r,s,ds:darknessScore(s.meanL)}; }).filter(Boolean).sort((a,b)=>b.ds-a.ds).forEach(({r,s,ds},i) => {
+        const bc=darknessBandColor(ds),bl=darknessBandLabel(ds);
+        const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:60px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';t.getContext('2d').drawImage(r.crop,0,0);
+        const row=document.createElement('div');row.className='score-row';row.style.gridTemplateColumns='28px 60px auto 1fr auto';
+        const re=document.createElement('div');re.className='score-rank';re.textContent=i+1;
+        const tw=document.createElement('div');tw.appendChild(t);
+        const ie=document.createElement('div');ie.className='score-info';
+        ie.innerHTML=`<div class="score-label">${r.label}</div><div class="score-sub">${darknessNormalise?`shifted L* ${s.meanL.toFixed(1)}`:`L* ${(s.meanL+s.lShift).toFixed(1)}`}${darknessNormalise?` · bg ${s.lShift.toFixed(1)}`:''} · ref ${REF_L}</div><div class="score-bar-wrap"><div class="score-bar" style="width:${ds}%;background:${bc};"></div></div>`;
+        const ne=document.createElement('div');ne.innerHTML=`<div class="score-num" style="color:${bc};">${ds}</div><div class="score-band-lbl" style="color:${bc};">${bl}</div>`;
+        row.appendChild(re);row.appendChild(tw);row.appendChild(ie);row.appendChild(ne);body.appendChild(row);
+      });
+    });
+  }
+}
+
+
+// ── Color Score tab (mean a* and b* loss from base) ──
+// For each group, computes the mean a* and mean b* of detected coil
+// pixels for every coil.  Score = mean loss in (a + b) relative to
+// the base coil, normalised so base = 0 and the theoretical floor
+// (a=0, b=0, i.e. all chroma gone) = 100.
+// Groups shown as collapsible sections identical to the Darkness Score.
+
+function abCoilStats(r) {
+  if (!r.maskResult) return null;
+  const d    = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+  const mask = r.maskResult.mask;
+  const w = r.w, h = r.h;
+  const total = w * h;
+
+  // b* shift: use background normalisation if enabled, otherwise 0
+  let bShift = 0;
+  if (colorNormalise) {
+    const lThreshR = r.maskResult.thresh.lThresh;
+    let minL3 = Infinity, maxL3 = -Infinity;
+    for (let i = 0; i < total; i++) {
+      const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+      if (L < minL3) minL3 = L; if (L > maxL3) maxL3 = L;
+    }
+    if (maxL3 === minL3) maxL3 = minL3 + 1;
+    const lBinW3 = (maxL3 - minL3) / 20;
+    const bgCutoffR = lThreshR + 2 * lBinW3;
+    let bSumBg = 0, bCntBg = 0;
+    for (let i = 0; i < total; i++) {
+      const lab = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]);
+      if (lab.L > bgCutoffR && lab.b <= 7) { bSumBg += lab.b; bCntBg++; }
+    }
+    bShift = bCntBg > 0 ? bSumBg / bCntBg : 0;
+  }
+
+  // ── Mean shifted b* of coil pixels ───────────────────
+  let sumB = 0, cnt = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i] !== 1) continue;
+    const lab = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]);
+    sumB += (lab.b - bShift);
+    cnt++;
+  }
+  if (cnt === 0) return null;
+  return { meanB: sumB / cnt, bShift, cnt };
+}
+
+// Score = how much shifted b* has dropped from the base coil.
+// Both base and coil use their own per-image shift, so they are
+// already normalised to their respective background modes.
+// A drop of 12 shifted-b* units = score of 100 (worst).
+function abScore(coilStats) {
+  const drop = REF_B - coilStats.meanB;
+  return Math.max(0, Math.min(100, Math.round(drop / 12 * 100)));
+}
+
+// ── Shifted b* histogram ──────────────────────────────
+// Same 20-bin histogram as computeChannelHistogram('b') but every
+// pixel's b* value is shifted so the mode of the all-pixels
+// distribution lands at 0.  This removes background colour bias.
+function computeShiftedBHistogram(canvas, lThresh) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const total = w * h;
+  const N = 20;
+
+  // Find b* shift from background pixels (same definition as abCoilStats)
+  let minL4 = Infinity, maxL4 = -Infinity;
+  for (let i = 0; i < total; i++) {
+    const L = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L;
+    if (L < minL4) minL4 = L; if (L > maxL4) maxL4 = L;
+  }
+  if (maxL4 === minL4) maxL4 = minL4 + 1;
+  const lBinW4 = (maxL4 - minL4) / 20;
+  const bgCutoff4 = lThresh + 2 * lBinW4;
+  let bSumBg4 = 0, bCntBg4 = 0;
+  for (let i = 0; i < total; i++) {
+    const lab = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]);
+    if (lab.L > bgCutoff4 && lab.b <= 7) { bSumBg4 += lab.b; bCntBg4++; }
+  }
+  const bShift = bCntBg4 > 0 ? bSumBg4 / bCntBg4 : 0;
+
+  // Second pass: bin shifted values
+  const allShifted = [];
+  for (let i = 0; i < total; i++) {
+    allShifted.push(rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).b - bShift);
+  }
+  let minV = Infinity, maxV = -Infinity;
+  for (const v of allShifted) { if (v < minV) minV = v; if (v > maxV) maxV = v; }
+  if (maxV === minV) maxV = minV + 1;
+  const binW = (maxV - minV) / N;
+  const bins = new Array(N).fill(0);
+  for (const v of allShifted) bins[Math.min(N - 1, Math.floor((v - minV) / binW))]++;
+
+  const binEdges = Array.from({ length: N + 1 }, (_, k) => minV + k * binW);
+  return { bins, binEdges, totalPixels: total, minV, maxV, N, channel: 'b (shifted)', bShift };
+}
+
+// ── Shifted L* histogram ──────────────────────────────
+// Shifts L* so the mean L* of background pixels (those two or more
+// bins above the coil detection threshold with b* ≤ 7) lands at 0.
+// Requires the coil detection results to already be in maskResult.
+function computeShiftedLHistogram(canvas, lThresh) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const total = w * h;
+  const N = 20;
+
+  // Use the same background definition as coilScore
+  const lShift = computeBgLShift(d, total, lThresh);
+
+  const allShifted = [];
+  for (let i = 0; i < total; i++) {
+    allShifted.push(rgbToLab(d[i*4], d[i*4+1], d[i*4+2]).L - lShift);
+  }
+  let minV = Infinity, maxV = -Infinity;
+  for (const v of allShifted) { if (v < minV) minV = v; if (v > maxV) maxV = v; }
+  if (maxV === minV) maxV = minV + 1;
+  const binW = (maxV - minV) / N;
+  const bins = new Array(N).fill(0);
+  for (const v of allShifted) bins[Math.min(N - 1, Math.floor((v - minV) / binW))]++;
+
+  const binEdges = Array.from({ length: N + 1 }, (_, k) => minV + k * binW);
+  return { bins, binEdges, totalPixels: total, minV, maxV, N, channel: 'L (shifted)', lShift };
+}
+
+// Reuse the same band thresholds and colours as the Darkness Score
+function renderAbScoreTab() {
+  const container = document.getElementById('view-ab-score');
+  container.innerHTML = '';
+  container.appendChild(makeDarknessBandSlider(() => renderAbScoreTab()));
+  container.appendChild(makeNormToggle(() => colorNormalise, v => { colorNormalise = v; }, renderAbScoreTab));
+  container.appendChild(makeViewModeBtn(() => colorSortMode, v => { colorSortMode = v; }, renderAbScoreTab));
+
+  const statMap = {};
+  results.forEach(r => { const s = abCoilStats(r); if (s) statMap[r.index] = s; });
+  if (!Object.keys(statMap).length) { container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coil pixels detected yet.</div>'; return; }
+
+  if (colorSortMode === 'sorted') {
+    const all = results.map(r => {
+      const s = statMap[r.index]; if (!s) return null;
+      return { r, s, ds: abScore(s) };
+    }).filter(Boolean).sort((a, b) => b.ds - a.ds);
+    all.forEach(({ r, s, ds }, i) =>
+      container.appendChild(makeSortedRow(r, ds, darknessBandColor(ds), darknessBandLabel(ds), i, groupNameOf(r))));
+  } else {
+    const assignedIndices = new Set(groups.flatMap(g => g.memberIndices));
+    const sections = [...groups.map(g => ({ name: g.name, coils: g.memberIndices.map(id => results.find(r => r.index === id)).filter(Boolean) }))];
+    const ung = results.filter(r => !assignedIndices.has(r.index) && statMap[r.index]);
+    if (ung.length) sections.push({ name: 'Ungrouped', coils: ung });
+    sections.forEach(sec => {
+      const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--blue);color:#fff;border-radius:8px;margin-bottom:6px;cursor:pointer;user-select:none;';
+      hdr.innerHTML=`<span style="font-size:13px;font-weight:700;">${sec.name}</span><span style="font-size:11px;opacity:.7;">${sec.coils.length} coil${sec.coils.length!==1?'s':''} ▸</span>`;
+      container.appendChild(hdr);
+      const body=document.createElement('div');body.style.cssText='margin-bottom:14px;display:none;';container.appendChild(body);
+      let open=false;
+      hdr.addEventListener('click',()=>{open=!open;body.style.display=open?'':'none';hdr.querySelector('span:last-child').textContent=`${sec.coils.length} coil${sec.coils.length!==1?'s':''} ${open?'▾':'▸'}`;});
+      const strip=document.createElement('div');strip.style.cssText='display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px;';
+      sec.coils.forEach(r=>{const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:80px;height:auto;border-radius:6px;border:1.5px solid var(--border);display:block;';t.getContext('2d').drawImage(r.crop,0,0);const n=document.createElement('div');n.style.cssText='font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);text-align:center;';n.textContent=r.label;w.appendChild(t);w.appendChild(n);strip.appendChild(w);});
+      body.appendChild(strip);
+      sec.coils.map(r=>{const s=statMap[r.index];if(!s)return null;return{r,s,ds:abScore(s)};}).filter(Boolean).sort((a,b)=>b.ds-a.ds).forEach(({r,s,ds},i)=>{
+        const bc=darknessBandColor(ds),bl=darknessBandLabel(ds);
+        const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:60px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';t.getContext('2d').drawImage(r.crop,0,0);
+        const row=document.createElement('div');row.className='score-row';row.style.gridTemplateColumns='28px 60px auto 1fr auto';
+        const re=document.createElement('div');re.className='score-rank';re.textContent=i+1;
+        const tw=document.createElement('div');tw.appendChild(t);
+        const ie=document.createElement('div');ie.className='score-info';
+        ie.innerHTML=`<div class="score-label">${r.label}</div><div class="score-sub">b* ${s.meanB.toFixed(1)} · ref ${REF_B}</div><div class="score-bar-wrap"><div class="score-bar" style="width:${ds}%;background:${bc};"></div></div>`;
+        const ne=document.createElement('div');ne.innerHTML=`<div class="score-num" style="color:${bc};">${ds}</div><div class="score-band-lbl" style="color:${bc};">${bl}</div>`;
+        row.appendChild(re);row.appendChild(tw);row.appendChild(ie);row.appendChild(ne);body.appendChild(row);
+      });
+    });
+  }
+}
+
+
+// ── Combined score weight ─────────────────────────────
+// colorWeight: fraction of score from Color (b* loss), rest from Darkness.
+// Default: 20% color, 80% darkness.
+let colorWeight = 0.20;
+
+// Single-dot weight slider — same design as the glassware app.
+function makeWeightSlider(rerenderFn) {
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'margin-bottom:18px;user-select:none;';
+
+  const labelRow = document.createElement('div');
+  labelRow.style.cssText = 'display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:6px;font-family:"DM Mono",monospace;';
+  const leftLbl  = document.createElement('span');
+  const rightLbl = document.createElement('span');
+  labelRow.appendChild(leftLbl); labelRow.appendChild(rightLbl);
+  wrapper.appendChild(labelRow);
+
+  function updateLabels() {
+    const cp = Math.round(colorWeight * 100);
+    leftLbl.textContent  = `Color ${cp}%`;
+    rightLbl.textContent = `Darkness ${100 - cp}%`;
+  }
+
+  const outerRow = document.createElement('div');
+  outerRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  const wlbl0   = document.createElement('span'); wlbl0.style.cssText   = 'font-size:10px;font-weight:700;font-family:"DM Mono",monospace;color:var(--text-2);flex-shrink:0;'; wlbl0.textContent   = '0';
+  const wlbl100 = document.createElement('span'); wlbl100.style.cssText = 'font-size:10px;font-weight:700;font-family:"DM Mono",monospace;color:var(--text-2);flex-shrink:0;'; wlbl100.textContent = '100';
+
+  const trackWrap = document.createElement('div');
+  trackWrap.style.cssText = 'position:relative;height:52px;flex:1;overflow:visible;';
+
+  const track = document.createElement('div');
+  track.style.cssText = 'position:absolute;top:20px;left:0;right:0;height:6px;border-radius:3px;overflow:hidden;display:flex;';
+  const segColor    = document.createElement('div'); segColor.style.cssText    = 'height:100%;background:#e67e22;';
+  const segDarkness = document.createElement('div'); segDarkness.style.cssText = 'height:100%;background:#234083;flex:1;';
+  track.appendChild(segColor); track.appendChild(segDarkness);
+  trackWrap.appendChild(track);
+
+  // Tick marks
+  for (let v = 0; v <= 100; v += 5) {
+    const isMajor = v % 25 === 0;
+    const tick = document.createElement('div');
+    tick.style.cssText = `position:absolute;left:${v}%;top:27px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;`;
+    const line = document.createElement('div');
+    line.style.cssText = `width:1.5px;height:${isMajor?8:5}px;background:var(--text);opacity:${isMajor?0.5:0.22};`;
+    tick.appendChild(line);
+    if (isMajor) { const lbl = document.createElement('div'); lbl.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);line-height:1;margin-top:1px;'; lbl.textContent = v; tick.appendChild(lbl); }
+    trackWrap.appendChild(tick);
+  }
+
+  const dot = document.createElement('div');
+  dot.style.cssText = 'position:absolute;top:20px;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:#fff;border:2.5px solid #555;cursor:grab;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:5;overflow:visible;';
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;font-size:11px;font-weight:700;font-family:"DM Mono",monospace;padding:2px 7px;border-radius:4px;pointer-events:none;white-space:nowrap;display:none;z-index:20;';
+  dot.appendChild(tip); trackWrap.appendChild(dot);
+
+  function updateVisuals() {
+    const cp = Math.round(colorWeight * 100);
+    segColor.style.width = cp + '%';
+    dot.style.left = cp + '%';
+    updateLabels();
+  }
+
+  let dragging = false;
+  function startDrag(e) {
+    e.preventDefault(); e.stopPropagation(); dragging = true;
+    const rect = trackWrap.getBoundingClientRect();
+    tip.style.display = 'block'; dot.style.cursor = 'grabbing';
+    function onMove(ev) {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const snapped = Math.round(Math.max(0, Math.min(100, (cx - rect.left) / rect.width * 100)) / 5) * 5;
+      colorWeight = snapped / 100;
+      updateVisuals();
+      tip.textContent = `${snapped}% color / ${100-snapped}% darkness`;
+      rerenderFn();
+    }
+    function onUp() {
+      tip.style.display = 'none'; dot.style.cursor = 'grab';
+      document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
+      setTimeout(() => { dragging = false; }, 0);
+    }
+    document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, {passive:false}); document.addEventListener('touchend', onUp);
+  }
+  dot.addEventListener('mousedown', e => { e.stopPropagation(); startDrag(e); });
+  dot.addEventListener('touchstart', e => { e.stopPropagation(); startDrag(e); }, {passive:false});
+  dot.addEventListener('click', e => {
+    e.stopPropagation();
+    if (dragging) return;
+    const cp = Math.round(colorWeight * 100);
+    tip.textContent = `${cp}% color / ${100-cp}% darkness`;
+    tip.style.display = 'block';
+    setTimeout(() => tip.style.display = 'none', 1500);
+  });
+  wrapper.addEventListener('click', e => e.stopPropagation());
+  wrapper.addEventListener('mousedown', e => e.stopPropagation());
+  wrapper.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+
+  outerRow.appendChild(wlbl0); outerRow.appendChild(trackWrap); outerRow.appendChild(wlbl100);
+  wrapper.appendChild(outerRow);
+  updateVisuals();
+  return wrapper;
+}
+
+// ── All Results tab ───────────────────────────────────
+// Combined score = colorWeight × Color Score + (1−colorWeight) × Darkness Score.
+// Groups ranked by their worst member's combined score (highest = most degraded).
+// ── View mode state for All Results ──────────────────
+let allSortMode = 'groups';  // 'groups' | 'sorted'
+
+function renderAllResultsTab() {
+  const container = document.getElementById('view-all-results');
+  container.innerHTML = '';
+
+  container.appendChild(makeDarknessBandSlider(() => renderAllResultsTab()));
+  container.appendChild(makeWeightSlider(() => renderAllResultsTab()));
+  container.appendChild(makeViewModeBtn(() => allSortMode, v => { allSortMode = v; }, renderAllResultsTab));
+
+  const darknessStatMap = {}, colorStatMap = {};
+  results.forEach(r => {
+    const ds = coilScore(r);   if (ds) darknessStatMap[r.index] = ds;
+    const cs = abCoilStats(r); if (cs) colorStatMap[r.index]    = cs;
+  });
+
+  // Score every coil against the fixed reference
+  const allScored = results.map(r => {
+    const ds = darknessStatMap[r.index];
+    const cs = colorStatMap[r.index];
+    if (!ds || !cs) return null;
+    const dScore   = darknessScore(ds.meanL);
+    const cScore   = abScore(cs);
+    const combined = Math.round(colorWeight * cScore + (1 - colorWeight) * dScore);
+    return { r, dScore, cScore, combined };
+  }).filter(Boolean);
+
+  if (!allScored.length) {
+    container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coil pixels detected yet.</div>';
+    return;
+  }
+
+  if (allSortMode === 'sorted') {
+    // Flat worst→best list across all coils
+    allScored.sort((a, b) => b.combined - a.combined);
+    allScored.forEach(({ r, dScore, cScore, combined }, i) => {
+      const row = makeSortedRow(r, combined, darknessBandColor(combined), darknessBandLabel(combined), i, groupNameOf(r));
+      // append sub-scores inside the info element
+      const infoEl = row.querySelector('div:nth-child(3)');
+      if (infoEl) {
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);margin-top:1px;';
+        sub.textContent = `darkness ${dScore} · color ${cScore}`;
+        infoEl.appendChild(sub);
+      }
+      container.appendChild(row);
+    });
+    return;
+  }
+
+  // Groups view — rank groups by worst member, show ungrouped at end
+  const scoredMap = Object.fromEntries(allScored.map(s => [s.r.index, s]));
+
+  const groupScores = groups.map(g => {
+    const members = g.memberIndices.map(idx => results.find(r => r.index === idx)).filter(Boolean);
+    const scored  = members.map(r => scoredMap[r.index]).filter(Boolean);
+    const worst   = Math.max(...scored.map(s => s.combined), 0);
+    return { group: g, scored, worst };
+  }).sort((a, b) => b.worst - a.worst);
+
+  groupScores.forEach(({ group, scored, worst }, gi) => {
+    const bc = darknessBandColor(worst), bl = darknessBandLabel(worst);
+
+    const groupHdr = document.createElement('div');
+    groupHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;user-select:none;';
+    groupHdr.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:var(--text-2);font-family:'DM Mono',monospace;min-width:24px;text-align:center;">${gi+1}</div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;color:var(--blue);">${group.name}</div>
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text-2);">worst score: ${worst}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${bc};">${worst}</div>
+        <div style="font-size:9px;font-weight:700;color:${bc};letter-spacing:.5px;text-transform:uppercase;">${bl}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);margin-left:4px;">▸</div>`;
+    container.appendChild(groupHdr);
+
+    const memberBody = document.createElement('div');
+    memberBody.style.cssText = 'display:none;margin-bottom:12px;padding-left:14px;border-left:3px solid var(--border);';
+    container.appendChild(memberBody);
+    let open = false;
+    groupHdr.addEventListener('click', () => { open=!open; memberBody.style.display=open?'':'none'; groupHdr.querySelector('div:last-child').textContent=open?'▾':'▸'; });
+
+    [...scored].sort((a, b) => b.combined - a.combined).forEach(({ r, dScore, cScore, combined }, mi) => {
+      const mbc=darknessBandColor(combined), mbl=darknessBandLabel(combined);
+      const thumb=document.createElement('canvas'); thumb.width=r.w; thumb.height=r.h;
+      thumb.style.cssText='width:50px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';
+      thumb.getContext('2d').drawImage(r.crop,0,0);
+      const row=document.createElement('div'); row.className='score-row';
+      row.style.cssText+='grid-template-columns:24px 50px auto 1fr auto;margin-top:6px;';
+      const re=document.createElement('div'); re.className='score-rank'; re.textContent=mi+1;
+      const tw=document.createElement('div'); tw.appendChild(thumb);
+      const ie=document.createElement('div'); ie.className='score-info';
+      ie.innerHTML=`<div class="score-label">${r.label}</div><div class="score-sub">color <b>${cScore}</b> · darkness <b>${dScore}</b></div><div class="score-bar-wrap"><div class="score-bar" style="width:${combined}%;background:${mbc};"></div></div>`;
+      const ne=document.createElement('div'); ne.innerHTML=`<div class="score-num" style="color:${mbc};">${combined}</div><div class="score-band-lbl" style="color:${mbc};">${mbl}</div>`;
+      row.appendChild(re); row.appendChild(tw); row.appendChild(ie); row.appendChild(ne); memberBody.appendChild(row);
+    });
+  });
+
+  // Ungrouped coils
+  const assigned = new Set(groups.flatMap(g => g.memberIndices));
+  const ungrouped = allScored.filter(s => !assigned.has(s.r.index)).sort((a,b) => b.combined - a.combined);
+  if (ungrouped.length) {
+    const ungHdr = document.createElement('div');
+    ungHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;user-select:none;margin-top:8px;';
+    ungHdr.innerHTML = `<div style="flex:1;font-size:13px;font-weight:700;color:var(--text-2);">Ungrouped</div><div style="font-size:12px;color:var(--text-2);">▸</div>`;
+    container.appendChild(ungHdr);
+    const ungBody = document.createElement('div'); ungBody.style.cssText='display:none;margin-bottom:12px;padding-left:14px;border-left:3px solid var(--border);'; container.appendChild(ungBody);
+    let open=false; ungHdr.addEventListener('click',()=>{open=!open;ungBody.style.display=open?'':'none';ungHdr.querySelector('div:last-child').textContent=open?'▾':'▸';});
+    ungrouped.forEach(({r,dScore,cScore,combined},mi)=>{
+      const mbc=darknessBandColor(combined),mbl=darknessBandLabel(combined);
+      const thumb=document.createElement('canvas');thumb.width=r.w;thumb.height=r.h;thumb.style.cssText='width:50px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';thumb.getContext('2d').drawImage(r.crop,0,0);
+      const row=document.createElement('div');row.className='score-row';row.style.cssText+='grid-template-columns:24px 50px auto 1fr auto;margin-top:6px;';
+      const re=document.createElement('div');re.className='score-rank';re.textContent=mi+1;
+      const tw=document.createElement('div');tw.appendChild(thumb);
+      const ie=document.createElement('div');ie.className='score-info';
+      ie.innerHTML=`<div class="score-label">${r.label}</div><div class="score-sub">color <b>${cScore}</b> · darkness <b>${dScore}</b></div><div class="score-bar-wrap"><div class="score-bar" style="width:${combined}%;background:${mbc};"></div></div>`;
+      const ne=document.createElement('div');ne.innerHTML=`<div class="score-num" style="color:${mbc};">${combined}</div><div class="score-band-lbl" style="color:${mbc};">${mbl}</div>`;
+      row.appendChild(re);row.appendChild(tw);row.appendChild(ie);row.appendChild(ne);ungBody.appendChild(row);
+    });
+  }
+}
+
+// ── Info tab ──────────────────────────────────────────
+function renderInfoTab() {
+  const container = document.getElementById('view-info');
+  container.innerHTML = `
+  <div style="max-width:780px;margin:0 auto;padding:8px 0 40px;font-family:'Titillium Web',sans-serif;color:var(--text);line-height:1.65;">
+
+    <h2 style="font-size:18px;font-weight:700;margin:0 0 22px;color:var(--blue);">TOPP Catalyst Analyzer — App Guide</h2>
+
+    <!-- OVERVIEW -->
+    <div style="margin-bottom:30px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Overview</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:13px;margin-bottom:8px;">This app quantifies the degradation of copper/iron catalyst coils used in the TOPP (Turbine Oil Performance Panel) accelerated aging test. Each coil is photographed at week 0 and at intervals during the test. As oil degrades, the coil surface darkens and loses its copper-orange colour. This app measures that change automatically from photos using pixel-level L*a*b* colour analysis.</p>
+        <p style="font-size:13px;">The workflow has two stages: <strong>crop adjustment</strong> (define which part of each photo is the coil, create groups) and <strong>analysis</strong> (scores computed across multiple tabs).</p>
+      </div>
+    </div>
+
+    <!-- STAGE 1 -->
+    <div style="margin-bottom:30px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Stage 1 — Upload &amp; Crop Adjustment</div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--blue);">Uploading photos</div>
+        <p style="font-size:12px;color:var(--text-2);">Drop a photo (JPG, PNG) or PDF onto the landing zone, then click <strong>Detect Coils</strong>. The app scans the image for rectangular regions separated by white gaps and crops each one. Multi-coil batch photos (e.g. four coils in a row) are split automatically.</p>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;">Use <strong>＋ Add More Photos</strong> in the crop screen to append coils from additional images — useful when time points are in separate files.</p>
+      </div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--blue);">Adjusting crops</div>
+        <p style="font-size:12px;color:var(--text-2);">Each detected coil shows a <span style="color:#ff1493;font-weight:700;">pink border</span>. Drag any edge to tighten the crop around the coil wire. Click <strong>✕</strong> to remove a bad crop.</p>
+      </div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--blue);">Creating groups</div>
+        <p style="font-size:12px;color:var(--text-2);">Each group represents one coil followed through multiple test weeks. Click <strong>+ New Group</strong>: click the week-0 coil first (becomes the <strong>base</strong>, blue border), then click each subsequent week's coil (green border). Click <strong>✓ Done</strong> and name the group.</p>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;"><strong>⚡ Auto Group Detection</strong> auto-groups every four consecutive coils — coil 1 = base of Group 1, coils 2–4 = members; coil 5 = base of Group 2, etc.</p>
+      </div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--blue);">Submit Crops</div>
+        <p style="font-size:12px;color:var(--text-2);">Click <strong>Submit Crops ▶</strong> to commit all bounding boxes. Coil pixel detection runs automatically and you proceed to the analysis tabs.</p>
+      </div>
+    </div>
+
+    <!-- COIL DETECTION -->
+    <div style="margin-bottom:30px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Coil Pixel Detection</div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Detection rules</div>
+        <p style="font-size:12px;color:var(--text-2);">A pixel is classified as coil if it satisfies <strong>any</strong> of these conditions:</p>
+        <ul style="font-size:12px;color:var(--text-2);padding-left:18px;margin-top:6px;line-height:1.9;">
+          <li><strong>b* &gt; 7</strong> — warm/yellow-orange hue (characteristic of copper wire)</li>
+          <li><strong>L* ≤ lThresh</strong> — dark enough to fall in the deposit population. lThresh is found from the 20-bin L* histogram: locate the mode bin in the 30–100 range, walk left bin by bin, stop when a bin's proportion is higher than the previous step — that is the valley floor between the background and deposit populations. The bottom edge of that bin minus 2 is lThresh.</li>
+        </ul>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;">Fully-solid rows or columns of coil pixels are zeroed out as border artifacts. The <span style="color:#50c878;font-weight:700;">green overlay</span> shows detected coil pixels. Toggle with <strong>👁 Mask</strong>. Click any pixel to inspect its L*, a*, b* values and which rules fired.</p>
+      </div>
+
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">✏️ Coil Detection Editing</div>
+        <p style="font-size:12px;color:var(--text-2);">Click <strong>✏️ Coil Detection Editing</strong> below any coil card to open the editing modal. The photo is shown with the green mask composited on top. Controls:</p>
+        <ul style="font-size:12px;color:var(--text-2);padding-left:18px;margin-top:6px;line-height:1.9;">
+          <li><strong>◀ Darker / Lighter ▶</strong> — shifts lThresh by one histogram bin, expanding or contracting the L*-based coil detection. Any pixels the new threshold removes are also removed from the paint mask.</li>
+          <li><strong>Erase brush</strong> — click and drag directly on the photo to remove pixels from the coil mask. Brush size slider 1–8px. The brush cursor is a semi-transparent red circle showing exactly what will be erased.</li>
+          <li><strong>✓ Apply</strong> — commits the current mask back to the coil card. <strong>✕ Cancel</strong> — closes without changes.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CROPS TAB -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Crops Tab</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:12px;color:var(--text-2);">Shows all cropped coil photos with the green mask overlay. Click any pixel to inspect its L*, a*, b* values and see which detection rule(s) fired (displayed in green if the rule fired, grey if not). Use this tab to verify detection before examining scores.</p>
+      </div>
+    </div>
+
+    <!-- HISTOGRAMS -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Histogram Tabs (L*, a*, b*, L* Shifted, b* Shifted)</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:12px;color:var(--text-2);">Each histogram shows a 20-bin distribution of one L*a*b* channel across all pixels in the crop (full image, not just coil pixels). Click any bar to highlight which pixels fall in that range — selected pixels are shown at full colour, everything else is desaturated. Click again to deselect.</p>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;"><strong>L* Shifted</strong> and <strong>b* Shifted</strong> tabs subtract the background reference from every pixel's value so the background peak sits at 0. The background is defined as pixels with L* more than 2 bins above lThresh and b* ≤ 7 — the white paper surface. Additionally, sparse bins in the 70–100 L* range (&lt;3% of pixels) and everything to their right are excluded to remove overexposed specular spots. This normalisation makes distributions comparable across photos taken on different backgrounds.</p>
+      </div>
+    </div>
+
+    <!-- BACKGROUND NORMALISATION -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Background Normalisation</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:12px;color:var(--text-2);">The Darkness and Color Score tabs both have a <strong>📐 Normalisation: ON/OFF</strong> toggle. When ON (default), each photo's background mean L* or b* is subtracted from the coil pixel values before scoring, removing bias from lighting and paper colour differences between photos.</p>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;">Background pixels are defined as: L* &gt; lThresh + 2 bins AND b* ≤ 7 AND L* below the first sparse bin (&lt;3% of pixels) in the 70–100 range. Their mean L* (for darkness) or mean b* (for colour) is the shift reference.</p>
+      </div>
+    </div>
+
+    <!-- DARKNESS SCORE -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Darkness Score Tab</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">What it measures</div>
+        <p style="font-size:12px;color:var(--text-2);">Mean shifted L* of all detected coil pixels. With normalisation on, the background mean L* is subtracted so 0 = same brightness as background. Negative values mean the coil is darker than the background (expected for heavily deposited coils). The sub-label shows <code style="font-size:11px;font-family:'DM Mono',monospace;">bg X.X</code> — the background reference value that was subtracted.</p>
+      </div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Score formula</div>
+        <code style="font-size:12px;font-family:'DM Mono',monospace;background:var(--surface2);padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px;">Score = (baseL_shifted − coilL_shifted) / 20 × 100</code>
+        <p style="font-size:12px;color:var(--text-2);">Base coil = 0. A drop of 20 shifted-L* units = score 100. Clamped 0–100.</p>
+        <div style="margin-top:10px;background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);line-height:1.8;">
+          <strong style="color:var(--text);">Example</strong><br>
+          Background mean L* = 82 (subtracted as the shift)<br>
+          Base coil shifted L* = 80 − 82 = −2<br>
+          Week-6 coil shifted L* = 60 − 82 = −22<br>
+          Drop = −2 − (−22) = 20 shifted units<br>
+          Score = 20 / 20 × 100 = <strong style="color:var(--blue);">100</strong>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Rating bands &amp; slider</div>
+        <p style="font-size:12px;color:var(--text-2);">The three-dot slider sets the boundaries between <span style="color:#27ae60;font-weight:700;">Good</span>, <span style="color:#f1c40f;font-weight:700;">Moderate</span>, <span style="color:#e67e22;font-weight:700;">Poor</span>, and <span style="color:#c0392b;font-weight:700;">Extremely Poor</span>. The same thresholds apply across all score tabs.</p>
+      </div>
+    </div>
+
+    <!-- COLOR SCORE -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Color Score Tab</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">What it measures</div>
+        <p style="font-size:12px;color:var(--text-2);">Drop in mean shifted b* of detected coil pixels from the base coil. With normalisation on, the background mean b* (measured from the same background pixel population as darkness normalisation) is subtracted before averaging. This removes paper-colour bias so photos on different backgrounds are directly comparable.</p>
+      </div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Score formula</div>
+        <code style="font-size:12px;font-family:'DM Mono',monospace;background:var(--surface2);padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px;">Score = (baseB_shifted − coilB_shifted) / 12 × 100</code>
+        <p style="font-size:12px;color:var(--text-2);">A drop of 12 shifted-b* units from base = score 100. No drop = 0. Clamped 0–100.</p>
+        <div style="margin-top:10px;background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);line-height:1.8;">
+          <strong style="color:var(--text);">Example</strong><br>
+          Background mean b* = 3.5 (subtracted as the shift)<br>
+          Base coil shifted b* = 18 − 3.5 = +14.5<br>
+          Week-9 coil shifted b* = 8 − 3.5 = +4.5<br>
+          Drop = 14.5 − 4.5 = 10 shifted units<br>
+          Score = 10 / 12 × 100 = <strong style="color:var(--blue);">83</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLARE SCORE -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">Glare Score Tab</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">What it measures</div>
+        <p style="font-size:12px;color:var(--text-2);">Glare pixels are coil pixels that represent undeposited copper surface — warm-coloured and still bright. A pixel qualifies as glare if all three hold:</p>
+        <ul style="font-size:12px;color:var(--text-2);padding-left:18px;margin-top:6px;line-height:1.9;">
+          <li><strong>b* &gt; 7</strong> — warm/yellow-orange hue</li>
+          <li><strong>a* &gt; 1</strong> — enough red component to confirm copper colour</li>
+          <li><strong>L* &gt; lThresh + 5</strong> — at least 5 L* units brighter than the coil detection threshold (not a dark deposit)</li>
+        </ul>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;">The score is based on the <strong>sum of L* values</strong> across all glare pixels. These pixels are highlighted in <span style="color:#e6b800;font-weight:700;">yellow</span> on the photo thumbnails; non-glare pixels are dimmed to 70% brightness.</p>
+      </div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Score formula</div>
+        <code style="font-size:12px;font-family:'DM Mono',monospace;background:var(--surface2);padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px;">worstCase = coilGlareCnt × 25<br>Score = (baseLSum − coilLSum) / (baseLSum − worstCase) × 100</code>
+        <p style="font-size:12px;color:var(--text-2);margin-top:8px;">Base coil = 0. Score 100 = the coil's glare pixels average an L* of 25 (very dark — almost fully deposited). The worst-case denominator uses the <em>coil's own</em> glare pixel count × 25, so the scale is anchored to that specific coil's surface area rather than the base.</p>
+        <div style="margin-top:10px;background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);line-height:1.8;">
+          <strong style="color:var(--text);">Example</strong><br>
+          Base coil: 400 glare pixels, L* sum = 28,000<br>
+          Week-12 coil: 200 glare pixels, L* sum = 9,000<br>
+          worstCase = 200 × 25 = 5,000<br>
+          Range = 28,000 − 5,000 = 23,000<br>
+          Drop = 28,000 − 9,000 = 19,000<br>
+          Score = 19,000 / 23,000 × 100 = <strong style="color:var(--blue);">83</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALL RESULTS -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">All Results Tab</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Combined score</div>
+        <code style="font-size:12px;font-family:'DM Mono',monospace;background:var(--surface2);padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px;">Combined = colorWeight × ColorScore + (1 − colorWeight) × DarknessScore</code>
+        <p style="font-size:12px;color:var(--text-2);">Default: 20% Color Score, 80% Darkness Score. Adjust with the single-dot weight slider. Groups are ranked by their worst member's combined score.</p>
+        <div style="margin-top:10px;background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);line-height:1.8;">
+          <strong style="color:var(--text);">Example</strong><br>
+          Darkness Score = 60, Color Score = 40<br>
+          Combined = 0.20 × 40 + 0.80 × 60<br>
+          Combined = 8 + 48 = <strong style="color:var(--blue);">56</strong>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Reading the table</div>
+        <p style="font-size:12px;color:var(--text-2);">Each group header shows the worst combined score. Click to expand and see every coil sorted worst first, with both sub-scores (Color and Darkness). The base coil always scores 0 and carries a <strong>base</strong> badge.</p>
+      </div>
+    </div>
+
+    <!-- LAB COLOUR SPACE -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-2);margin-bottom:10px;">L*a*b* Colour Space</div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:12px;color:var(--text-2);">All measurements use the CIE L*a*b* colour space — perceptually uniform, with lightness separated from colour.</p>
+        <ul style="font-size:12px;color:var(--text-2);padding-left:18px;margin-top:6px;line-height:1.9;">
+          <li><strong>L*</strong> — lightness, 0 (black) to 100 (white)</li>
+          <li><strong>a*</strong> — green (negative) to red (positive). Copper wire has positive a*</li>
+          <li><strong>b*</strong> — blue (negative) to yellow (positive). Copper wire has high positive b*; dark deposits push b* toward 0 or negative</li>
+        </ul>
+        <p style="font-size:12px;color:var(--text-2);margin-top:6px;">Conversion uses the standard sRGB → XYZ → L*a*b* pipeline with a D65 illuminant. Photos should be taken in consistent lighting conditions across all time points.</p>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+// ── Tab switching ─────────────────────────────────────
+// ── Glare Score ───────────────────────────────────────
+// Glare pixels = coil pixels that pass the b* rule (b > bHiThresh)
+// but do NOT pass the L* rule (L > lThresh).
+// These are the warm-coloured, still-bright copper areas — undeposited surface.
+// glareCoilStats returns the fraction of coil pixels that are glare pixels.
+// Score: base fraction = 0. If coil has 0% glare pixels = 100 (worst).
+// Linear between base fraction and 0%.
+
+function glareCoilStats(r) {
+  if (!r.maskResult) return null;
+  const d     = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+  const mask  = r.maskResult.mask;
+  const thresh = r.maskResult.thresh;
+  let glareLSum = 0, glareCnt = 0, coilCnt = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i] !== 1) continue;
+    coilCnt++;
+    const lab = rgbToLab(d[i*4], d[i*4+1], d[i*4+2]);
+    if (lab.b > thresh.bHiThresh && lab.a > 1 && lab.L > thresh.lThresh + 5) {
+      glareCnt++;
+      glareLSum += lab.L;
+    }
+  }
+  if (coilCnt === 0) return null;
+  return { glareLSum, glareCnt, coilCnt };
+}
+
+// Score: 0 = coilLSum equals baseLSum (no degradation).
+// 100 = coilLSum equals coilGlareCnt × 25 (every glare pixel averages L* = 25).
+// Formula: (baseLSum - coilLSum) / (baseLSum - worstCase) × 100, clamped 0–100.
+function glareScore(coilStats) {
+  const worstCase = coilStats.glareCnt * 25;
+  const range = REF_GLARE_LSUM - worstCase;
+  if (range <= 0) return 0;
+  const drop = REF_GLARE_LSUM - coilStats.glareLSum;
+  return Math.max(0, Math.min(100, Math.round(drop / range * 100)));
+}
+
+function renderGlareScoreTab() {
+  const container = document.getElementById('view-glare-score');
+  container.innerHTML = '';
+  container.appendChild(makeDarknessBandSlider(() => renderGlareScoreTab()));
+  container.appendChild(makeViewModeBtn(() => glareSortMode, v => { glareSortMode = v; }, renderGlareScoreTab));
+
+  function drawGlareHighlight(canvas, r) {
+    if (!r.maskResult) { canvas.getContext('2d').drawImage(r.crop, 0, 0); return; }
+    const d=r.crop.getContext('2d').getImageData(0,0,r.w,r.h).data,mask=r.maskResult.mask,thresh=r.maskResult.thresh;
+    const ctx=canvas.getContext('2d'),imgData=ctx.createImageData(r.w,r.h),od=imgData.data;
+    for(let i=0;i<r.w*r.h;i++){
+      const pr=d[i*4],pg=d[i*4+1],pb=d[i*4+2],lab=rgbToLab(pr,pg,pb);
+      const isGlare=mask[i]===1&&lab.b>thresh.bHiThresh&&lab.a>1&&lab.L>thresh.lThresh+5;
+      if(isGlare){od[i*4]=Math.round(pr*0.55+255*0.45);od[i*4+1]=Math.round(pg*0.55+220*0.45);od[i*4+2]=Math.round(pb*0.55);}
+      else{od[i*4]=Math.round(pr*0.7);od[i*4+1]=Math.round(pg*0.7);od[i*4+2]=Math.round(pb*0.7);}
+      od[i*4+3]=255;
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  const statMap = {};
+  results.forEach(r => { const s = glareCoilStats(r); if (s) statMap[r.index] = s; });
+  if (!Object.keys(statMap).length) { container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coil pixels detected yet.</div>'; return; }
+
+  if (glareSortMode === 'sorted') {
+    const all = results.map(r => {
+      const s = statMap[r.index]; if (!s) return null;
+      return { r, s, gs: glareScore(s) };
+    }).filter(Boolean).sort((a, b) => b.gs - a.gs);
+    all.forEach(({ r, s, gs }, i) => {
+      const t=document.createElement('canvas');t.width=r.w;t.height=r.h;drawGlareHighlight(t,r);
+      const row=makeSortedRow(r,gs,darknessBandColor(gs),darknessBandLabel(gs),i,groupNameOf(r));
+      // replace the thumb with the glare-highlighted one
+      row.children[1].replaceChildren(t);
+      container.appendChild(row);
+    });
+  } else {
+    const assignedIndices=new Set(groups.flatMap(g=>g.memberIndices));
+    const sections=[...groups.map(g=>({name:g.name,coils:g.memberIndices.map(id=>results.find(r=>r.index===id)).filter(Boolean)}))];
+    const ung=results.filter(r=>!assignedIndices.has(r.index)&&statMap[r.index]);
+    if(ung.length) sections.push({name:'Ungrouped',coils:ung});
+    sections.forEach(sec=>{
+      const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--blue);color:#fff;border-radius:8px;margin-bottom:6px;cursor:pointer;user-select:none;';
+      hdr.innerHTML=`<span style="font-size:13px;font-weight:700;">${sec.name}</span><span style="font-size:11px;opacity:.7;">${sec.coils.length} coil${sec.coils.length!==1?'s':''} ▸</span>`;
+      container.appendChild(hdr);
+      const body=document.createElement('div');body.style.cssText='margin-bottom:14px;display:none;';container.appendChild(body);
+      let open=false;hdr.addEventListener('click',()=>{open=!open;body.style.display=open?'':'none';hdr.querySelector('span:last-child').textContent=`${sec.coils.length} coil${sec.coils.length!==1?'s':''} ${open?'▾':'▸'}`;});
+      const strip=document.createElement('div');strip.style.cssText='display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:12px;';
+      sec.coils.forEach(r=>{const w=document.createElement('div');w.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:80px;height:auto;border-radius:6px;border:1.5px solid var(--border);display:block;';drawGlareHighlight(t,r);const n=document.createElement('div');n.style.cssText='font-size:9px;font-family:"DM Mono",monospace;color:var(--text-2);text-align:center;';n.textContent=r.label;w.appendChild(t);w.appendChild(n);strip.appendChild(w);});
+      body.appendChild(strip);
+      sec.coils.map(r=>{const s=statMap[r.index];if(!s)return null;return{r,s,gs:glareScore(s)};}).filter(Boolean).sort((a,b)=>b.gs-a.gs).forEach(({r,s,gs},i)=>{
+        const bc=darknessBandColor(gs),bl=darknessBandLabel(gs);
+        const t=document.createElement('canvas');t.width=r.w;t.height=r.h;t.style.cssText='width:60px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';drawGlareHighlight(t,r);
+        const row=document.createElement('div');row.className='score-row';row.style.gridTemplateColumns='28px 60px auto 1fr auto';
+        const re=document.createElement('div');re.className='score-rank';re.textContent=i+1;
+        const tw=document.createElement('div');tw.appendChild(t);
+        const ie=document.createElement('div');ie.className='score-info';
+        const baseGStr=`ref ${REF_GLARE_LSUM.toLocaleString()}`;
+        ie.innerHTML=`<div class="score-label">${r.label}</div><div class="score-sub">glare L* sum ${Math.round(s.glareLSum).toLocaleString()} (${s.glareCnt} px) · ${baseGStr}</div><div class="score-bar-wrap"><div class="score-bar" style="width:${gs}%;background:${bc};"></div></div>`;
+        const ne=document.createElement('div');ne.innerHTML=`<div class="score-num" style="color:${bc};">${gs}</div><div class="score-band-lbl" style="color:${bc};">${bl}</div>`;
+        row.appendChild(re);row.appendChild(tw);row.appendChild(ie);row.appendChild(ne);body.appendChild(row);
+      });
+    });
+  }
+}
+
+
+// ── Best Coil tab ─────────────────────────────────────
+// Finds which coil has the highest raw (un-scored) value for each
+// metric — lightest (highest mean shifted L*), most colourful
+// (highest mean shifted b*), and most glare (highest glareLSum).
+// Reports each winner with its photo and which metric(s) it won.
+function renderBestTab() {
+  const container = document.getElementById('view-best-coil');
+  container.innerHTML = '';
+
+  const note = document.createElement('div');
+  note.style.cssText = 'font-size:11px;color:var(--text-2);margin-bottom:18px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;line-height:1.5;';
+  note.innerHTML = '<strong>⭐ Best Coil</strong> — shows which coil has the highest raw value for each metric across all uploaded coils. "Best" means least degraded: lightest (highest shifted L*), most colourful (highest shifted b*), and most glare (highest glare L* sum). A single coil may win multiple categories.';
+  container.appendChild(note);
+
+  if (!results.length) {
+    container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coils detected yet.</div>';
+    return;
+  }
+
+  // Compute raw stats for every coil (not scores — raw values)
+  const statsList = results.map(r => {
+    const ds = coilScore(r);
+    const cs = abCoilStats(r);
+    const gs = glareCoilStats(r);
+    if (!ds) return null;
+    return { r, meanL: ds.meanL, meanB: cs ? cs.meanB : null, glareLSum: gs ? gs.glareLSum : null, glareCnt: gs ? gs.glareCnt : 0 };
+  }).filter(Boolean);
+
+  if (!statsList.length) {
+    container.innerHTML += '<div style="color:var(--text-2);font-size:12px;padding:12px;">No coil pixels detected yet.</div>';
+    return;
+  }
+
+  // Find the winners (highest value = least degraded)
+  const bestLight  = statsList.reduce((a, b) => b.meanL    > a.meanL    ? b : a);
+  const bestColor  = statsList.filter(s => s.meanB !== null).reduce((a, b) => b.meanB    > a.meanB    ? b : a, statsList.find(s => s.meanB !== null));
+  const bestGlare  = statsList.filter(s => s.glareLSum !== null).reduce((a, b) => b.glareLSum > a.glareLSum ? b : a, statsList.find(s => s.glareLSum !== null));
+
+  // Build a map of coil index → which categories it won
+  const winMap = {};
+  const addWin = (s, label, color, value) => {
+    if (!s) return;
+    if (!winMap[s.r.index]) winMap[s.r.index] = { s, wins: [] };
+    winMap[s.r.index].wins.push({ label, color, value });
+  };
+  addWin(bestLight, 'Lightest',      '#185FA5', `shifted L* ${bestLight.meanL.toFixed(1)}`);
+  if (bestColor) addWin(bestColor, 'Most Colourful', '#e67e22', `shifted b* ${bestColor.meanB.toFixed(1)}`);
+  if (bestGlare) addWin(bestGlare, 'Most Glare',    '#27ae60',  `glare L* sum ${Math.round(bestGlare.glareLSum).toLocaleString()} (${bestGlare.glareCnt} px)`);
+
+  // Render one card per winning coil (sorted by number of wins desc)
+  const winners = Object.values(winMap).sort((a, b) => b.wins.length - a.wins.length);
+
+  winners.forEach(({ s, wins }) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'display:flex;gap:16px;align-items:flex-start;padding:14px 18px;background:var(--surface);border:2px solid var(--border);border-radius:12px;margin-bottom:14px;flex-wrap:wrap;';
+    card.style.borderColor = wins.length > 1 ? '#f1c40f' : 'var(--border)';
+
+    // Photo
+    const thumb = document.createElement('canvas');
+    thumb.width = s.r.w; thumb.height = s.r.h;
+    thumb.style.cssText = 'width:90px;height:auto;border-radius:6px;border:1.5px solid var(--border);flex-shrink:0;display:block;';
+    thumb.getContext('2d').drawImage(s.r.crop, 0, 0);
+    card.appendChild(thumb);
+
+    // Info
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;';
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-size:14px;font-weight:700;color:var(--blue);';
+    nameEl.textContent = s.r.label;
+    if (wins.length > 1) nameEl.textContent += '  ⭐ Multi-winner';
+    info.appendChild(nameEl);
+
+    wins.forEach(({ label, color, value }) => {
+      const badge = document.createElement('div');
+      badge.style.cssText = `display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:${color}18;border:1.5px solid ${color};border-radius:8px;`;
+      badge.innerHTML = `<span style="font-size:12px;font-weight:700;color:${color};">🏆 ${label}</span><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);">${value}</span>`;
+      info.appendChild(badge);
+    });
+
+    card.appendChild(info);
+    container.appendChild(card);
+  });
+}
+
+// ── View mode state for each score tab ──────────────
+let darknessSortMode = 'groups';  // 'groups' | 'sorted'
+let colorSortMode    = 'groups';
+let glareSortMode    = 'groups';
+
+// Toggle button — switches between Groups and Sorted view
+function makeViewModeBtn(getMode, setMode, rerenderFn) {
+  const btn = document.createElement('button');
+  function update() {
+    const grouped = getMode() === 'groups';
+    btn.textContent  = grouped ? '📋 View: Groups' : '📊 View: Sorted (worst → best)';
+    btn.style.background  = grouped ? '#fff' : 'var(--blue)';
+    btn.style.color       = grouped ? 'var(--blue)' : '#fff';
+    btn.style.borderColor = 'var(--blue)';
+  }
+  btn.style.cssText = 'padding:6px 14px;font-family:"Titillium Web",sans-serif;font-size:11px;font-weight:700;border:1.5px solid var(--blue);border-radius:6px;cursor:pointer;margin-bottom:14px;transition:all .15s;';
+  btn.addEventListener('click', () => {
+    setMode(getMode() === 'groups' ? 'sorted' : 'groups');
+    update(); rerenderFn();
+  });
+  update();
+  return btn;
+}
+
+// Sorted row — matches the glassware compare-row layout
+function makeSortedRow(r, score, bc, bl, i, groupName) {
+  const thumb = document.createElement('canvas');
+  thumb.width = r.w; thumb.height = r.h;
+  thumb.style.cssText = 'width:50px;height:auto;border-radius:4px;border:1px solid var(--border);flex-shrink:0;display:block;';
+  thumb.getContext('2d').drawImage(r.crop, 0, 0);
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:28px 50px auto 1fr auto;align-items:center;gap:12px;padding:8px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px;';
+
+  const rankEl = document.createElement('div');
+  rankEl.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-2);font-family:"DM Mono",monospace;text-align:center;';
+  rankEl.textContent = i + 1;
+
+  const thumbWr = document.createElement('div'); thumbWr.appendChild(thumb);
+
+  const infoEl = document.createElement('div');
+  infoEl.style.cssText = 'display:flex;flex-direction:column;gap:2px;overflow:hidden;';
+  infoEl.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.label}</div>
+    ${groupName ? `<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text-2);">${groupName}</div>` : ''}
+    <div style="height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:2px;">
+      <div style="height:100%;width:${score}%;background:${bc};border-radius:99px;"></div>
+    </div>`;
+
+  const numEl = document.createElement('div');
+  numEl.style.cssText = 'text-align:right;';
+  numEl.innerHTML = `<div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${bc};">${score}</div><div style="font-size:9px;font-weight:700;color:${bc};letter-spacing:.5px;text-transform:uppercase;">${bl}</div>`;
+
+  row.appendChild(rankEl); row.appendChild(thumbWr); row.appendChild(infoEl); row.appendChild(numEl);
+  return row;
+}
+
+function groupNameOf(r) {
+  const g = groups.find(g => g.memberIndices.includes(r.index));
+  return g ? g.name : null;
+}
+
+
+const HIST_TABS = ['histogram-L', 'histogram-a', 'histogram-b'];
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.vtab');
+  if (!btn) return;
+  document.querySelectorAll('.vtab').forEach(b => b.classList.remove('vtab-active'));
+  btn.classList.add('vtab-active');
+  const tab = btn.dataset.tab;
+  document.getElementById('view-crops').style.display                  = tab === 'crops'                  ? '' : 'none';
+  document.getElementById('view-color-score').style.display            = tab === 'color-score'            ? '' : 'none';
+  document.getElementById('view-ab-score').style.display               = tab === 'ab-score'               ? '' : 'none';
+  document.getElementById('view-glare-score').style.display            = tab === 'glare-score'            ? '' : 'none';
+  document.getElementById('view-all-results').style.display            = tab === 'all-results'            ? '' : 'none';
+  document.getElementById('view-best-coil').style.display              = tab === 'best-coil'              ? '' : 'none';
+  document.getElementById('view-info').style.display                   = tab === 'info'                   ? '' : 'none';
+  document.getElementById('view-histogram-b-shifted').style.display    = tab === 'histogram-b-shifted'    ? '' : 'none';
+  document.getElementById('view-histogram-L-shifted').style.display    = tab === 'histogram-L-shifted'    ? '' : 'none';
+  HIST_TABS.forEach(t => {
+    const el = document.getElementById(`view-${t}`);
+    if (el) el.style.display = tab === t ? '' : 'none';
+  });
+  if (HIST_TABS.includes(tab)) renderHistogramTab(tab.split('-')[1]);
+  if (tab === 'histogram-b-shifted') renderShiftedBHistogramTab();
+  if (tab === 'histogram-L-shifted') renderShiftedLHistogramTab();
+  if (tab === 'color-score')  renderColorScoreTab();
+  if (tab === 'ab-score')     renderAbScoreTab();
+  if (tab === 'glare-score')  renderGlareScoreTab();
+  if (tab === 'all-results')  renderAllResultsTab();
+  if (tab === 'best-coil')    renderBestTab();
+  if (tab === 'info')         renderInfoTab();
+});
+// ── Add More Photos button ────────────────────────────
+document.getElementById('add-photos-btn').addEventListener('click', () => {
+  document.getElementById('add-photos-input').click();
+});
+
+document.getElementById('add-photos-input').addEventListener('change', async function() {
+  const file = this.files[0]; if (!file) return;
+  this.value = ''; // reset so same file can be re-added
+
+  const prog = document.getElementById('add-photos-progress');
+  prog.style.display = '';
+  prog.textContent = 'Loading…';
+
+  // Load the file into a canvas (same logic as main handleFile)
+  let canvas;
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const page = await pdf.getPage(1);
+    const vp = page.getViewport({ scale: 2 });
+    canvas = document.createElement('canvas'); canvas.width = vp.width; canvas.height = vp.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  } else {
+    canvas = await new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0); res(c);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  prog.textContent = 'Detecting coils…';
+  await tick();
+
+  const blocks = findImageBlocks(canvas);
+  const startIdx = results.length;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const t = blocks[i];
+    let crop = document.createElement('canvas'); crop.width = t.w; crop.height = t.h;
+    crop.getContext('2d').drawImage(canvas, t.x, t.y, t.w, t.h, 0, 0, t.w, t.h);
+    crop = trimWhiteBorders(crop);
+    const newIdx = results.length + 1;
+    results.push({ index: newIdx, label: `Coil ${newIdx}`, crop, w: crop.width, h: crop.height, bx0: 0, by0: 0, bx1: crop.width, by1: crop.height, maskResult: null, bgLight: null, bgDark: null });
+    prog.textContent = `Added ${i + 1} of ${blocks.length}…`;
+    await tick();
+  }
+
+  // Re-index all results sequentially
+  results.forEach((r, i) => { r.index = i + 1; r.label = `Coil ${i + 1}`; });
+
+  prog.textContent = `✓ Added ${blocks.length} coil${blocks.length !== 1 ? 's' : ''}`;
+  setTimeout(() => { prog.style.display = 'none'; }, 2000);
+
+  renderCropStage();
+});
+
+
+let groupBuildMode = false;   // are we currently building a group?
+let pendingGroup   = null;    // { baseIndex, memberIndices[] }
+
+function renderCropStage() {
+  document.getElementById('results-section').classList.add('show');
+  document.getElementById('results-title').textContent = 'Adjust Crops';
+  document.getElementById('results-meta').textContent = `${results.length} coil${results.length !== 1 ? 's' : ''}`;
+  document.getElementById('stage-crop').style.display = '';
+  document.getElementById('stage-analysis').style.display = 'none';
+
+  const grid = document.getElementById('crop-grid'); grid.innerHTML = '';
+
+  // ── Group toolbar ──────────────────────────────────
+  const toolbar = document.createElement('div');
+  toolbar.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;';
+
+  const newGroupBtn = document.createElement('button');
+  newGroupBtn.style.cssText = 'padding:7px 18px;font-family:"Titillium Web",sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--blue);border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;';
+
+  const groupHint = document.createElement('div');
+  groupHint.style.cssText = 'font-size:11px;color:var(--text-2);';
+
+  function enterGroupMode() {
+    groupBuildMode = true;
+    pendingGroup = { memberIndices: [] };
+    newGroupBtn.textContent = '✓ Done';
+    newGroupBtn.style.background = 'var(--green)';
+    newGroupBtn.style.borderColor = 'var(--green)';
+    groupHint.textContent = 'Click coils to add or remove them from the group. Click ✓ Done when finished.';
+    renderCropCards();
+  }
+
+  function exitGroupMode(save) {
+    if (save && pendingGroup && pendingGroup.memberIndices.length > 0) {
+      groupCounter++;
+      const defaultName = `Group ${groupCounter}`;
+      const name = prompt('Name this group:', defaultName) || defaultName;
+      groups.push({ name, memberIndices: [...pendingGroup.memberIndices] });
+    }
+    groupBuildMode = false;
+    pendingGroup = null;
+    newGroupBtn.textContent = '+ New Group';
+    newGroupBtn.style.background = 'var(--blue)';
+    newGroupBtn.style.borderColor = 'var(--blue)';
+    groupHint.textContent = groups.length ? groups.map(g => g.name).join(' · ') : '';
+    renderCropCards();
+  }
+
+  newGroupBtn.textContent = groupBuildMode ? '✓ Done' : '+ New Group';
+  if (groupBuildMode) {
+    newGroupBtn.style.background = 'var(--green)';
+    newGroupBtn.style.borderColor = 'var(--green)';
+    groupHint.textContent = 'Click the base coil, then click additional coils.';
+  } else {
+    groupHint.textContent = groups.length ? groups.map(g => g.name).join(' · ') : '';
+  }
+  newGroupBtn.addEventListener('click', () => {
+    if (groupBuildMode) exitGroupMode(true);
+    else enterGroupMode();
+  });
+
+  // Clear all groups button
+  if (groups.length && !groupBuildMode) {
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Clear Groups';
+    clearBtn.style.cssText = 'padding:7px 14px;font-family:"Titillium Web",sans-serif;font-size:11px;font-weight:700;border:1.5px solid #e74c3c;border-radius:6px;background:#fff;color:#e74c3c;cursor:pointer;';
+    clearBtn.addEventListener('click', () => { groups = []; groupCounter = 0; renderCropStage(); });
+    toolbar.appendChild(clearBtn);
+  }
+
+  // Auto Group Detection — groups every 4 coils, first of each group is base
+  if (!groupBuildMode) {
+    const parkerBtn = document.createElement('button');
+    parkerBtn.textContent = '⚡ Auto Group Detection';
+    parkerBtn.style.cssText = 'padding:7px 18px;font-family:"Titillium Web",sans-serif;font-size:12px;font-weight:700;border:1.5px solid var(--copper,#b87333);border-radius:6px;background:var(--copper,#b87333);color:#fff;cursor:pointer;transition:background .15s;';
+    parkerBtn.addEventListener('mouseenter', () => { parkerBtn.style.background = '#96601e'; });
+    parkerBtn.addEventListener('mouseleave', () => { parkerBtn.style.background = 'var(--copper,#b87333)'; });
+    parkerBtn.addEventListener('click', () => {
+      groups = []; groupCounter = 0;
+      for (let i = 0; i < results.length; i += 4) {
+        const chunk = results.slice(i, i + 4);
+        if (chunk.length === 0) break;
+        groupCounter++;
+        groups.push({
+          name: `Group ${groupCounter}`,
+          memberIndices: chunk.map(r => r.index)
+        });
+      }
+      renderCropStage();
+    });
+    toolbar.appendChild(parkerBtn);
+  }
+
+  toolbar.appendChild(newGroupBtn);
+  toolbar.appendChild(groupHint);
+  grid.appendChild(toolbar);
+
+  // ── Coil cards ──────────────────────────────────────
+  function renderCropCards() {
+    // Remove all existing cards (keep toolbar)
+    while (grid.children.length > 1) grid.removeChild(grid.lastChild);
+
+    // Wrapper grid
+    const cardGrid = document.createElement('div'); cardGrid.className = 'coil-grid';
+    grid.appendChild(cardGrid);
+
+    results.forEach(r => {
+      // Determine group membership
+      const myGroup    = groups.find(g => g.memberIndices.includes(r.index));
+      
+      const isPending  = pendingGroup && pendingGroup.memberIndices.includes(r.index);
+      
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+
+      const card = document.createElement('div'); card.className = 'coil-card';
+
+      // Highlight border in group-build mode
+      if (groupBuildMode) {
+        if (isPending)        card.style.border = '2.5px solid var(--green)';
+        else                  card.style.border = '1.5px solid var(--border)';
+        card.style.cursor = 'pointer';
+      } else if (myGroup) {
+        card.style.border = '2px solid var(--blue-mid)';
+      }
+
+      const wrap = document.createElement('div'); wrap.className = 'coil-img-wrap';
+      const base = document.createElement('canvas'); base.width = r.w; base.height = r.h;
+      base.style.cssText = 'display:block;width:100%;height:auto;';
+      base.getContext('2d').drawImage(r.crop, 0, 0);
+      wrap.appendChild(base);
+
+      const over = document.createElement('canvas'); over.className = 'coil-overlay';
+      drawBorder(over, r.w, r.h, r.bx0, r.by0, r.bx1, r.by1);
+      wrap.appendChild(over);
+
+      const hit = document.createElement('canvas'); hit.width = r.w; hit.height = r.h;
+      hit.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+      wrap.appendChild(hit);
+      makeDraggable(hit, over, r, () => drawBorder(over, r.w, r.h, r.bx0, r.by0, r.bx1, r.by1));
+
+      card.appendChild(wrap);
+
+      // Label with group badge
+      const lbl = document.createElement('div'); lbl.className = 'coil-label';
+      let badge = '';
+      if (isPending)       badge = ' <span style="font-size:8px;background:var(--green);color:#fff;padding:1px 4px;border-radius:3px;">member</span>';
+      else if (myGroup)    badge = ` <span style="font-size:8px;background:var(--blue-mid);color:#fff;padding:1px 4px;border-radius:3px;">${myGroup.name}</span>`;
+      lbl.innerHTML = r.label + badge;
+      card.appendChild(lbl);
+
+      // Click in group mode
+      if (groupBuildMode) {
+        card.addEventListener('click', e => {
+          if (e.target === hit) return;
+          if (pendingGroup.memberIndices.includes(r.index)) {
+            pendingGroup.memberIndices = pendingGroup.memberIndices.filter(i => i !== r.index);
+          } else {
+            pendingGroup.memberIndices.push(r.index);
+          }
+          renderCropCards();
+        });
+      }
+
+      wrapper.appendChild(card);
+
+      // Buttons (only show delete when not in group-build mode)
+      if (!groupBuildMode) {
+        const btnRow = document.createElement('div'); btnRow.style.cssText = 'display:flex;gap:4px;';
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✕';
+        delBtn.style.cssText = 'flex:1;padding:5px 0;font-size:11px;font-family:"Titillium Web",sans-serif;font-weight:700;border:1.5px solid #e74c3c;border-radius:6px;background:#fff;color:#e74c3c;cursor:pointer;transition:background .15s,color .15s;';
+        delBtn.addEventListener('mouseenter', () => { delBtn.style.background = '#e74c3c'; delBtn.style.color = '#fff'; });
+        delBtn.addEventListener('mouseleave', () => { delBtn.style.background = '#fff'; delBtn.style.color = '#e74c3c'; });
+        delBtn.addEventListener('click', () => {
+          results = results.filter(x => x.index !== r.index);
+          results.forEach((x, i2) => { x.index = i2 + 1; x.label = `Coil ${i2 + 1}`; });
+          groups = groups.map(g => ({
+            ...g,
+            memberIndices: g.memberIndices.filter(i2 => i2 !== r.index)
+          })).filter(g => g.memberIndices.length > 0);
+          renderCropStage();
+        });
+        btnRow.appendChild(delBtn);
+        wrapper.appendChild(btnRow);
+      }
+
+      cardGrid.appendChild(wrapper);
+    });
+  }
+
+  renderCropCards();
+}
+
+// Submit Crops → re-crop, run automatic detection, then go to analysis
+document.getElementById('submit-crops-btn').addEventListener('click', () => {
+  results.forEach(r => {
+    const bw = Math.max(1, r.bx1 - r.bx0);
+    const bh = Math.max(1, r.by1 - r.by0);
+    const cropped = document.createElement('canvas');
+    cropped.width = bw; cropped.height = bh;
+    cropped.getContext('2d').drawImage(r.crop, r.bx0, r.by0, bw, bh, 0, 0, bw, bh);
+    r.crop = cropped;
+    r.w = bw; r.h = bh;
+    r.bx0 = 0; r.by0 = 0; r.bx1 = bw; r.by1 = bh;
+    // Run automatic detection immediately — no bg picks needed
+    r.maskResult = detectCoilMask(r.crop);
+  });
+  document.getElementById('stage-crop').style.display = 'none';
+  document.getElementById('results-title').textContent = 'Catalyst Coils';
+  renderAdjustGrid();
+});
+
+
+function renderAdjustGrid() {
+  document.getElementById('results-section').classList.add('show');
+  document.getElementById('stage-analysis').style.display = '';
+  document.getElementById('results-meta').textContent = `${results.length} coil${results.length !== 1 ? 's' : ''}`;
+  document.getElementById('adjust-hint').style.display = '';
+  document.getElementById('view-tabs').style.display = 'flex';
+  document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('vtab-active', b.dataset.tab === 'crops'));
+  document.getElementById('view-crops').style.display = '';
+  document.getElementById('view-color-score').style.display = 'none';
+  document.getElementById('view-ab-score').style.display    = 'none';
+  document.getElementById('view-glare-score').style.display = 'none';
+  document.getElementById('view-all-results').style.display = 'none';
+  document.getElementById('view-best-coil').style.display   = 'none';
+  document.getElementById('view-info').style.display        = 'none';
+  document.getElementById('view-histogram-b-shifted').style.display = 'none';
+  document.getElementById('view-histogram-L-shifted').style.display = 'none';
+  HIST_TABS.forEach(t => { const el = document.getElementById(`view-${t}`); if (el) el.style.display = 'none'; });
+
+  const grid = document.getElementById('adjust-grid'); grid.innerHTML = '';
+
+  results.forEach(r => {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+
+    const card = document.createElement('div'); card.className = 'coil-card';
+    const wrap = document.createElement('div'); wrap.className = 'coil-img-wrap';
+    wrap.style.cursor = 'crosshair';
+
+    const base = document.createElement('canvas'); base.width = r.w; base.height = r.h;
+    base.style.cssText = 'display:block;width:100%;height:auto;';
+    base.getContext('2d').drawImage(r.crop, 0, 0);
+    wrap.appendChild(base);
+
+    // Mask overlay — drawn immediately from auto detection
+    const maskOver = document.createElement('canvas');
+    maskOver.className = 'coil-overlay';
+    if (r.maskResult) {
+      drawMaskOverlay(maskOver, r.maskResult);
+    } else {
+      maskOver.style.display = 'none';
+    }
+    wrap.appendChild(maskOver);
+
+    // Crosshair + dot overlay for pixel inspector
+    const inspOver = document.createElement('canvas');
+    inspOver.className = 'coil-overlay';
+    wrap.appendChild(inspOver);
+
+    card.appendChild(wrap);
+
+    // Label: coil name + coil fraction
+    const lbl = document.createElement('div'); lbl.className = 'coil-label';
+    lbl.innerHTML = r.maskResult
+      ? `${r.label} <span style="color:var(--text-2);font-weight:400">${(r.maskResult.coilFraction*100).toFixed(1)}% coil</span>`
+      : r.label;
+    card.appendChild(lbl);
+
+    // Pixel info tooltip — shown below the label
+    const tooltip = document.createElement('div');
+    tooltip.style.cssText = 'display:none;font-size:9px;font-family:"DM Mono",monospace;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;line-height:1.6;color:var(--text);';
+    card.appendChild(tooltip);
+
+    wrapper.appendChild(card);
+
+    // ── Pixel inspector ───────────────────────────────
+    function toImgCoords(e) {
+      const rect = base.getBoundingClientRect();
+      return {
+        ix: Math.round((e.clientX - rect.left) / rect.width  * r.w),
+        iy: Math.round((e.clientY - rect.top)  / rect.height * r.h)
+      };
+    }
+
+    function drawInspCrosshair(cx, cy, isCoil) {
+      inspOver.width = r.w; inspOver.height = r.h;
+      const ctx = inspOver.getContext('2d');
+      ctx.clearRect(0, 0, r.w, r.h);
+      const col = isCoil ? 'rgba(255,80,80,0.9)' : 'rgba(255,255,80,0.9)';
+      ctx.strokeStyle = col; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    let inspActive = false;
+
+    wrap.addEventListener('click', e => {
+      const { ix, iy } = toImgCoords(e);
+      const px = Math.max(0, Math.min(r.w - 1, ix));
+      const py = Math.max(0, Math.min(r.h - 1, iy));
+
+      // If clicking the same spot again, dismiss
+      if (inspActive && Math.abs(px - (r._lastInspX || -99)) < 3 && Math.abs(py - (r._lastInspY || -99)) < 3) {
+        inspActive = false;
+        inspOver.width = r.w; inspOver.height = r.h;
+        inspOver.getContext('2d').clearRect(0, 0, r.w, r.h);
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      // Sample pixel
+      const pd  = r.crop.getContext('2d').getImageData(px, py, 1, 1).data;
+      const lab = rgbToLab(pd[0], pd[1], pd[2]);
+
+      // Look up mask classification
+      const isCoil = r.maskResult
+        ? r.maskResult.mask[py * r.w + px] === 1
+        : null;
+
+      // Draw crosshair
+      drawInspCrosshair(px, py, isCoil !== false);
+      inspActive = true;
+      r._lastInspX = px; r._lastInspY = py;
+
+      // Build tooltip
+      const thresh = r.maskResult ? r.maskResult.thresh : null;
+      let rulesHtml = '';
+      if (thresh) {
+        const rB = lab.b > thresh.bHiThresh;
+        const rL = lab.L <= thresh.lThresh;
+        const fmt = (fired, text) =>
+          `<span style="color:${fired ? '#27ae60' : '#aaa'};font-weight:${fired ? '700' : '400'}">${text}</span>`;
+        rulesHtml = `<br>${fmt(rL, `L*≤${thresh.lThresh.toFixed(1)}`)} &nbsp; ${fmt(rB, `b*>${thresh.bHiThresh}`)}`;
+      }
+
+      const classLabel = isCoil === null ? 'unknown'
+                       : isCoil          ? '<span style="color:#27ae60;font-weight:700;">Coil</span>'
+                                         : '<span style="color:#e74c3c;font-weight:700;">Background</span>';
+      tooltip.innerHTML =
+        `${classLabel}${rulesHtml}<br>` +
+        `L* <strong>${lab.L.toFixed(1)}</strong> &nbsp; ` +
+        `a* <strong>${lab.a.toFixed(1)}</strong> &nbsp; ` +
+        `b* <strong>${lab.b.toFixed(1)}</strong><br>` +
+        `RGB (${pd[0]}, ${pd[1]}, ${pd[2]}) &nbsp; ` +
+        `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb(${pd[0]},${pd[1]},${pd[2]});border:1px solid rgba(0,0,0,.2);vertical-align:middle;"></span>`;
+      tooltip.style.display = '';
+    });
+
+    // Button row: mask toggle + delete
+    const btnRow = document.createElement('div'); btnRow.style.cssText = 'display:flex;gap:4px;';
+
+    let maskVisible = true;
+    const maskBtn = document.createElement('button');
+    maskBtn.textContent = '👁 Mask';
+    maskBtn.style.cssText = `flex:1;padding:5px 0;font-size:10px;font-family:"Titillium Web",sans-serif;font-weight:700;letter-spacing:.5px;border:1.5px solid #50c878;border-radius:6px;background:#50c878;color:#fff;cursor:pointer;transition:background .15s,color .15s;`;
+    maskBtn.addEventListener('click', () => {
+      maskVisible = !maskVisible;
+      maskOver.style.display = maskVisible ? '' : 'none';
+      maskBtn.style.background = maskVisible ? '#50c878' : '#fff';
+      maskBtn.style.color      = maskVisible ? '#fff'    : '#50c878';
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✕';
+    delBtn.style.cssText = 'flex:0 0 32px;padding:5px 0;font-size:11px;font-family:"Titillium Web",sans-serif;font-weight:700;border:1.5px solid #e74c3c;border-radius:6px;background:#fff;color:#e74c3c;cursor:pointer;transition:background .15s,color .15s;';
+    delBtn.addEventListener('mouseenter', () => { delBtn.style.background = '#e74c3c'; delBtn.style.color = '#fff'; });
+    delBtn.addEventListener('mouseleave', () => { delBtn.style.background = '#fff'; delBtn.style.color = '#e74c3c'; });
+    delBtn.addEventListener('click', () => {
+      results = results.filter(x => x.index !== r.index);
+      results.forEach((x, i) => { x.index = i + 1; x.label = `Coil ${i + 1}`; });
+      renderAdjustGrid();
+    });
+
+    btnRow.appendChild(maskBtn);
+    btnRow.appendChild(delBtn);
+    wrapper.appendChild(btnRow);
+
+    // Oil Detection Accuracy button — only when mask is available
+    if (r.maskResult) {
+      const accBtn = document.createElement('button');
+      accBtn.textContent = '✏️ Coil Detection Editing';
+      accBtn.style.cssText = 'width:100%;padding:5px 0;font-size:10px;font-family:"Titillium Web",sans-serif;font-weight:700;letter-spacing:.4px;border:1.5px solid var(--blue-mid);border-radius:6px;background:#fff;color:var(--blue-mid);cursor:pointer;margin-top:2px;transition:background .15s,color .15s;display:block;';
+      accBtn.addEventListener('mouseenter', () => { accBtn.style.background = 'var(--blue-mid)'; accBtn.style.color = '#fff'; });
+      accBtn.addEventListener('mouseleave', () => { accBtn.style.background = '#fff'; accBtn.style.color = 'var(--blue-mid)'; });
+      accBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        // ── Build accuracy modal ──────────────────────
+        const existing = document.getElementById('accuracy-modal-backdrop');
+        if (existing) existing.remove();
+
+        // Work out the bin width from the lThresh context stored in the mask
+        // We need to re-derive minL, binW from the image data to know step size
+        const imgD = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+        const tot  = r.w * r.h;
+        let minL2 = Infinity, maxL2 = -Infinity;
+        for (let i = 0; i < tot; i++) {
+          const L = rgbToLab(imgD[i*4], imgD[i*4+1], imgD[i*4+2]).L;
+          if (L < minL2) minL2 = L;
+          if (L > maxL2) maxL2 = L;
+        }
+        if (maxL2 === minL2) maxL2 = minL2 + 1;
+        const stepSize = (maxL2 - minL2) / 20;  // one bin width
+
+        // Current working threshold — starts at the detected value
+        let workingLThresh = r.maskResult.thresh.lThresh;
+
+        const backdrop = document.createElement('div');
+        backdrop.id = 'accuracy-modal-backdrop';
+        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:var(--surface);border-radius:14px;padding:20px;max-width:92vw;max-height:92vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 40px rgba(0,0,0,.4);';
+
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:15px;font-weight:700;color:var(--blue);';
+        title.textContent = `Coil Detection Editing — ${r.label}`;
+        modal.appendChild(title);
+
+        // Threshold display
+        const threshLbl = document.createElement('div');
+        threshLbl.style.cssText = 'font-size:11px;font-family:"DM Mono",monospace;color:var(--text-2);';
+        function updateThreshLbl() {
+          threshLbl.textContent = `L* threshold: ${workingLThresh.toFixed(1)}  (step = ${stepSize.toFixed(1)})  ← = darker, → = lighter`;
+        }
+        updateThreshLbl();
+        modal.appendChild(threshLbl);
+
+        // Preview canvas — must be created before any function that uses pCtx
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width  = r.w;
+        previewCanvas.height = r.h;
+        previewCanvas.style.cssText = 'display:block;max-width:80vw;max-height:55vh;width:auto;height:auto;border-radius:6px;cursor:none;';
+        modal.appendChild(previewCanvas);
+        const pCtx = previewCanvas.getContext('2d');
+
+        // Paint state — declared before the functions that reference them
+        let paintMode   = true;
+        let paintAdding = false;
+        let brushRadius = 2;
+        let lastBrushX  = null, lastBrushY = null;
+
+        function drawBrushCursor(cx, cy) {
+          pCtx.save();
+          pCtx.globalAlpha = 0.25;
+          pCtx.fillStyle = 'rgb(255,80,80)';
+          pCtx.beginPath(); pCtx.arc(cx, cy, brushRadius, 0, Math.PI * 2); pCtx.fill();
+          pCtx.restore();
+        }
+
+        function redrawPreview(activeMask) {
+          const src = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+          const imgData = pCtx.createImageData(r.w, r.h);
+          const od = imgData.data;
+          for (let i = 0; i < r.w * r.h; i++) {
+            od[i*4]   = src[i*4];
+            od[i*4+1] = src[i*4+1];
+            od[i*4+2] = src[i*4+2];
+            od[i*4+3] = 255;
+            if (activeMask[i] === 1) {
+              od[i*4]   = Math.round(src[i*4]   * 0.65);
+              od[i*4+1] = Math.round(src[i*4+1] * 0.65 + 200 * 0.35);
+              od[i*4+2] = Math.round(src[i*4+2] * 0.65);
+            }
+          }
+          pCtx.putImageData(imgData, 0, 0);
+          if (paintMode && lastBrushX !== null) drawBrushCursor(lastBrushX, lastBrushY);
+        }
+
+        function computeThreshMask(lThreshOverride) {
+          const d2 = r.crop.getContext('2d').getImageData(0, 0, r.w, r.h).data;
+          const m = new Uint8Array(r.w * r.h);
+          for (let i = 0; i < r.w * r.h; i++) {
+            const lab = rgbToLab(d2[i*4], d2[i*4+1], d2[i*4+2]);
+            if (lab.b > r.maskResult.thresh.bHiThresh || lab.L <= lThreshOverride) m[i] = 1;
+          }
+          return m;
+        }
+
+        // Init paintMask and draw — after all functions are defined
+        let paintMask = computeThreshMask(workingLThresh);
+        let currentThreshMask = paintMask;
+        redrawPreview(paintMask);
+
+        function drawPreviewMask(lThreshOverride) {
+          currentThreshMask = computeThreshMask(lThreshOverride);
+          for (let i = 0; i < paintMask.length; i++) {
+            if (currentThreshMask[i] === 0) paintMask[i] = 0;
+          }
+          redrawPreview(paintMask);
+        }
+
+        function paintAt(imgX, imgY) {
+          for (let dy = -brushRadius; dy <= brushRadius; dy++) {
+            for (let dx = -brushRadius; dx <= brushRadius; dx++) {
+              if (dx*dx + dy*dy > brushRadius*brushRadius) continue;
+              const px2 = Math.round(imgX + dx), py2 = Math.round(imgY + dy);
+              if (px2 < 0 || px2 >= r.w || py2 < 0 || py2 >= r.h) continue;
+              paintMask[py2 * r.w + px2] = 0; // erase only
+            }
+          }
+          redrawPreview(paintMask);
+        }
+
+        function toImgCoords2(e) {
+          const rect = previewCanvas.getBoundingClientRect();
+          const src2 = e.touches ? e.touches[0] : e;
+          return {
+            ix: Math.round((src2.clientX - rect.left) / rect.width  * r.w),
+            iy: Math.round((src2.clientY - rect.top)  / rect.height * r.h)
+          };
+        }
+
+        let isPainting = false;
+        previewCanvas.addEventListener('mousedown', e => {
+          if (!paintMode) return;
+          isPainting = true;
+          const {ix, iy} = toImgCoords2(e);
+          paintAt(ix, iy);
+        });
+        previewCanvas.addEventListener('mousemove', e => {
+          const {ix, iy} = toImgCoords2(e);
+          lastBrushX = ix; lastBrushY = iy;
+          if (paintMode && isPainting) paintAt(ix, iy);
+          else redrawPreview(paintMask);
+        });
+        previewCanvas.addEventListener('mouseup',    () => { isPainting = false; });
+        previewCanvas.addEventListener('mouseleave', () => {
+          isPainting = false; lastBrushX = null;
+          redrawPreview(paintMask);
+        });
+        previewCanvas.addEventListener('touchstart', e => { e.preventDefault(); if(!paintMode)return; isPainting=true; const {ix,iy}=toImgCoords2(e); paintAt(ix,iy); }, {passive:false});
+        previewCanvas.addEventListener('touchmove',  e => { e.preventDefault(); const {ix,iy}=toImgCoords2(e); lastBrushX=ix; lastBrushY=iy; if(paintMode&&isPainting) paintAt(ix,iy); else redrawPreview(paintMask); }, {passive:false});
+        previewCanvas.addEventListener('touchend',   () => { isPainting = false; });
+
+        // Controls row: ◀/▶ threshold buttons + brush size + paint toggle
+        const modeRow = document.createElement('div');
+        modeRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
+
+        function makeCtrlBtn(label, color, bgColor) {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.style.cssText = `padding:8px 14px;font-family:"Titillium Web",sans-serif;font-size:12px;font-weight:700;border:1.5px solid ${color};border-radius:7px;background:${bgColor};color:${bgColor === '#fff' ? color : '#fff'};cursor:pointer;transition:all .12s;`;
+          return b;
+        }
+
+        // Paint mode toggle
+        const paintToggleBtn = makeCtrlBtn('🎨 Erase Mode', '#e74c3c', '#e74c3c');
+        function updatePaintToggle() {
+          if (paintMode) {
+            paintToggleBtn.textContent = '🎨 Erase Mode';
+            paintToggleBtn.style.background = '#e74c3c';
+            paintToggleBtn.style.borderColor = '#e74c3c';
+            paintToggleBtn.style.color = '#fff';
+            previewCanvas.style.cursor = 'none';
+          } else {
+            paintToggleBtn.textContent = '🖱 View Mode';
+            paintToggleBtn.style.background = '#fff';
+            paintToggleBtn.style.borderColor = 'var(--blue)';
+            paintToggleBtn.style.color = 'var(--blue)';
+            previewCanvas.style.cursor = 'default';
+          }
+        }
+        paintToggleBtn.addEventListener('click', () => { paintMode = !paintMode; updatePaintToggle(); redrawPreview(paintMask); });
+        modeRow.appendChild(paintToggleBtn);
+
+        // ◀/▶ always work — rebase paintMask to new threshold
+        const leftBtn  = makeCtrlBtn('◀ Darker',  'var(--blue)', 'var(--blue)');
+        const rightBtn = makeCtrlBtn('Lighter ▶', 'var(--blue)', 'var(--blue)');
+        leftBtn.addEventListener('click', () => {
+          workingLThresh -= stepSize; updateThreshLbl(); drawPreviewMask(workingLThresh);
+        });
+        rightBtn.addEventListener('click', () => {
+          workingLThresh += stepSize; updateThreshLbl(); drawPreviewMask(workingLThresh);
+        });
+
+        // Brush size slider (erase only)
+        const brushLbl = document.createElement('span');
+        brushLbl.style.cssText = 'font-size:11px;font-family:"DM Mono",monospace;color:var(--text-2);';
+        brushLbl.textContent = `Brush: ${brushRadius}px`;
+
+        const brushSlider = document.createElement('input');
+        brushSlider.type = 'range'; brushSlider.min = 1; brushSlider.max = 8; brushSlider.value = brushRadius;
+        brushSlider.style.cssText = 'width:100px;cursor:pointer;';
+        brushSlider.addEventListener('input', () => {
+          brushRadius = +brushSlider.value;
+          brushLbl.textContent = `Brush: ${brushRadius}px`;
+        });
+
+        modeRow.appendChild(leftBtn);
+        modeRow.appendChild(rightBtn);
+        modeRow.appendChild(brushSlider);
+        modeRow.appendChild(brushLbl);
+        modal.appendChild(modeRow);
+
+        // Apply / Cancel
+        const finalRow = document.createElement('div');
+        finalRow.style.cssText = 'display:flex;gap:8px;';
+
+        const applyBtn  = makeCtrlBtn('✓ Apply', 'var(--green)', 'var(--green)');
+        const cancelBtn = makeCtrlBtn('✕ Cancel', '#e74c3c', '#fff');
+
+        applyBtn.addEventListener('click', () => {
+          let finalMask = paintMask;
+          // Problem row/col zeroing
+          const pRow = new Uint8Array(r.h), pCol = new Uint8Array(r.w);
+          for (let y = 0; y < r.h; y++) {
+            let all = true;
+            for (let x = 0; x < r.w; x++) { if (finalMask[y*r.w+x]!==1){all=false;break;} }
+            if (all) pRow[y]=1;
+          }
+          for (let x = 0; x < r.w; x++) {
+            let all = true;
+            for (let y = 0; y < r.h; y++) { if (finalMask[y*r.w+x]!==1){all=false;break;} }
+            if (all) pCol[x]=1;
+          }
+          for (let y = 0; y < r.h; y++)
+            for (let x = 0; x < r.w; x++)
+              if (pRow[y]||pCol[x]) finalMask[y*r.w+x]=0;
+          let cc=0, vt=0;
+          for (let y=0;y<r.h;y++) for (let x=0;x<r.w;x++) {
+            if (!pRow[y]&&!pCol[x]) { vt++; if(finalMask[y*r.w+x]===1) cc++; }
+          }
+          const newThresh = { bHiThresh: r.maskResult.thresh.bHiThresh, lThresh: workingLThresh };
+          r.maskResult = { mask: finalMask, coilCount: cc, coilFraction: vt>0?cc/vt:0, w: r.w, h: r.h, thresh: newThresh };
+          drawMaskOverlay(maskOver, r.maskResult);
+          lbl.innerHTML = `${r.label} <span style="color:var(--text-2);font-weight:400">${(r.maskResult.coilFraction*100).toFixed(1)}% coil</span>`;
+          backdrop.remove();
+        });
+        cancelBtn.addEventListener('click', () => backdrop.remove());
+        backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+
+        finalRow.appendChild(applyBtn);
+        finalRow.appendChild(cancelBtn);
+        modal.appendChild(finalRow);
+
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+      });
+
+      wrapper.appendChild(accBtn);
+    }
+
+    grid.appendChild(wrapper);
+  });
+}
+</script>
+</body>
+</html>
